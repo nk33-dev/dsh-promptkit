@@ -10,7 +10,7 @@ Edge 中运行实际 `App/Enhance/Library` 组件并回放这些采集输出，�
 
 未重新执行 Harness 完整安装/升级流程，未实测 macOS/Linux 原生交互；其他深度和画像未逐一消耗真实模型调用。
 
-`pnpm check`、`pnpm exec vitest run --maxWorkers=2`（11 文件、107 项）和 `pnpm pack:plugin` 通过。归档验证包含客户端入口、宿主模块白名单、规则、许可及私密开发文件排除。`lib/` 已按安装约定重新构建。
+`pnpm check`、`pnpm exec vitest run --maxWorkers=2`（11 文件、108 项）和 `pnpm pack:plugin` 通过。归档验证包含客户端入口、宿主模块白名单、规则、许可及私密开发文件排除。`lib/` 已按安装约定重新构建。切换深度或画像会关闭旧流程，避免旧问卷混用新参数。
 
 2026-10-18，Windows 11 x64，Harness `0.2.1-rc.2`，插件 `0.1.2`，Node.js 24，pnpm 11.3.0。
 

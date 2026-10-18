@@ -77,6 +77,9 @@ export function App({
     close();
     clear();
   }, [composer.sessionId]);
+  useEffect(() => {
+    close();
+  }, [config?.settings.detail, config?.settings.audience]);
   function open(kind: Entry, event: React.MouseEvent<HTMLElement>) {
     // 卡片打开时再点同一个图标：浏览器先按点击外部关掉卡片，这里不再重新打开。
     if (pressedOpen.current || entry === kind) {
@@ -164,7 +167,7 @@ export function App({
         >
           <div className="pk-mode-menu" onKeyDown={navigateTabs}>
             {modes.map((mode) => {
-              const blocked = mode === "rewrite" && emptyDraft;
+              const blocked = emptyDraft;
               return (
                 <button
                   key={mode}
@@ -205,7 +208,7 @@ export function App({
           >
             {scene.kind === "enhance" ? (
               <Enhance
-                key={`${composer.sessionId}:${scene.mode}`}
+                key={`${composer.sessionId}:${scene.mode}:${config.settings.detail}:${config.settings.audience}`}
                 api={api}
                 t={t}
                 config={config}

@@ -2703,6 +2703,9 @@ window.__ModuleLoader__.load({
 				close();
 				clear();
 			}, [composer.sessionId]);
+			(0, react.useEffect)(() => {
+				close();
+			}, [config?.settings.detail, config?.settings.audience]);
 			function open(kind, event) {
 				if (pressedOpen.current || entry === kind) {
 					pressedOpen.current = false;
@@ -2782,7 +2785,7 @@ window.__ModuleLoader__.load({
 							className: "pk-mode-menu",
 							onKeyDown: navigateTabs,
 							children: modes.map((mode) => {
-								const blocked = mode === "rewrite" && emptyDraft;
+								const blocked = emptyDraft;
 								return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 									type: "button",
 									role: "menuitem",
@@ -2816,7 +2819,7 @@ window.__ModuleLoader__.load({
 								editId: id
 							}),
 							...composer
-						}, `${composer.sessionId}:${scene.mode}`) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Library, {
+						}, `${composer.sessionId}:${scene.mode}:${config.settings.detail}:${config.settings.audience}`) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Library, {
 							api,
 							t,
 							editId: scene.editId,

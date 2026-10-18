@@ -187,6 +187,16 @@ async function start(mode: "grill" | "rewrite" = "grill") {
 }
 const option = (name: RegExp) => screen.findByRole("radio", { name });
 describe("entry", () => {
+  it("closes the old workflow when audience or depth changes", async () => {
+    const value = structuredClone(config);
+    const { notifyConfiguration } = setup(async () => final, value);
+    await start("rewrite");
+    await screen.findByLabelText(en.result);
+    value.settings.detail = "detailed";
+    value.settings.audience = "p6";
+    act(notifyConfiguration);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
   it("opens the menu immediately without another request", async () => {
     const { call } = setup();
     const button = await screen.findByRole("button", { name: en.generate });
