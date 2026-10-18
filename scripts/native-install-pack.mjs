@@ -1,5 +1,10 @@
 import { connect } from "./cdp.mjs";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const { version } = JSON.parse(await readFile(resolve(root, "packages/promptkit/package.json"), "utf8"));
+const archive = process.argv[2] ?? process.env.PACK_ARCHIVE ?? resolve(root, "dist", `dsh-promptkit-${version}.tgz`);
 const page = await connect(),
   report = { checks: [], errors: [] };
 async function wait(expression) {
@@ -23,7 +28,7 @@ try {
   );
   await wait(`!!document.querySelector('[role=dialog] input')`);
   await page.evaluate(
-    `(()=>{const e=document.querySelector('[role=dialog] input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'/workspace/dsh-promptkit/dist/dsh-promptkit-0.1.2.tgz');e.dispatchEvent(new Event('input',{bubbles:true}));return true})()`,
+    `(()=>{const e=document.querySelector('[role=dialog] input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,${JSON.stringify(archive)});e.dispatchEvent(new Event('input',{bubbles:true}));return true})()`,
   );
   await click(
     `[...document.querySelectorAll('[role=dialog] button')].find(b=>b.textContent.trim()==='安装'&&!b.disabled)`,

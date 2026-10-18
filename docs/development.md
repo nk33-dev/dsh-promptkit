@@ -36,7 +36,7 @@ pnpm pack:plugin
 
 ## 原生验收
 
-`scripts/native-quick.mjs` 使用真实 Windows Harness 和本地确定性模型服务，需先以 `scripts/restart-harness.ps1` 启动调试端口。脚本会暂时切换模型配置并清理测试凭据，运行前应保存个人草稿。`scripts/native-lifecycle.mjs` 覆盖安装、升级、停用与恢复。
+`scripts/native-quick.mjs` 使用真实 Windows Harness 和本地确定性模型服务，需先以 `scripts/restart-harness.ps1 -Executable <Harness 可执行文件>`（或设置 `HARNESS_EXE`）启动调试端口。脚本会暂时切换模型配置并清理测试凭据，运行前应保存个人草稿。`scripts/native-lifecycle.mjs` 覆盖安装、升级、停用与恢复。
 
 浏览器客户端通过 Harness 模块表加载，不能直接读取插件的 node_modules；`tsdown.client.config.ts` 只把 Lucide 内联，其他外部模块由宿主提供。
 

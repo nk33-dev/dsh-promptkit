@@ -75,7 +75,7 @@ describe("persistent library", () => {
       {
         ...prompt,
         id: "other",
-        project: { ...project, workingDirectory: "D:/Elsewhere" },
+        project: { ...project, workingDirectory: "/workspace/Elsewhere" },
       },
       2,
     );
