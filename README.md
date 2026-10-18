@@ -1,10 +1,10 @@
 # PromptKit
 
+**中文** · [English](README.en.md)
+
 先写个大概，边问边把需求补齐。好用的提示词，留着下次用。
 
 DeepSeek Harness 插件：把草稿补成能直接执行的提示词，或先问几个关键问题再写。
-
-[English](README.en.md)
 
 ![输入框旁的两个入口与模式菜单](docs/images/composer-menu.png)
 

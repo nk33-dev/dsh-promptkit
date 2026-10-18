@@ -1,10 +1,10 @@
 # PromptKit
 
+[中文](README.md) · **English**
+
 Rough draft in, useful prompt out. Ask the missing questions, then keep prompts worth reusing.
 
 A DeepSeek Harness plugin that completes a draft into an actionable prompt, or clarifies the requirements first.
-
-[中文](README.md)
 
 ![Composer tools and mode menu](docs/images/composer-menu.png)
 
