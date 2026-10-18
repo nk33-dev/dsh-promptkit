@@ -1,0 +1,26 @@
+{
+  "name": "dsh-promptkit-workspace",
+  "private": true,
+  "license": "MIT",
+  "repository": "https://github.com/nk33-dev/dsh-promptkit",
+  "type": "module",
+  "packageManager": "pnpm@11.3.0",
+  "scripts": {
+    "build": "pnpm --filter @nk33-dev/dsh-promptkit build",
+    "check": "tsc -p packages/promptkit/tsconfig.host.json --noEmit && tsc -p packages/promptkit/tsconfig.client.json --noEmit",
+    "test": "vitest run",
+    "pack:plugin": "pnpm build && pnpm --filter @nk33-dev/dsh-promptkit pack --out dist/dsh-promptkit-0.1.2.tgz && node scripts/verify-pack.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "~18.3.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "tsdown": "0.22.2",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11",
+    "tsx": "^4.23.13",
+    "jsdom": "^29.1.1",
+    "@testing-library/react": "^16.3.3"
+  }
+}

@@ -1,0 +1,4 @@
+- insert:
+    - id: nk33-promptkit
+      name: '@nk33-dev/dsh-promptkit'
+      config: {}

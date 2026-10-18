@@ -1,0 +1,676 @@
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  RotateCw,
+} from "lucide-react";
+import type {
+  Configuration,
+  GenerationResult,
+  Mode,
+  Question,
+  Round,
+} from "../shared/types.ts";
+import type { Api } from "./api.ts";
+import { format, type T } from "./locales.ts";
+import { useDraft, type ComposerInput } from "./useDraft.ts";
+import { draftUnchanged, replacementEdits } from "./draft.ts";
+import { workflow } from "./workflow.ts";
+import {
+  Button,
+  CardHeader,
+  ErrorBar,
+  IconButton,
+  Loading,
+  useTask,
+  type ToastMessage,
+} from "./ui.tsx";
+
+interface Run {
+  start?: boolean;
+  forceFinal?: boolean;
+  /** 指定后从这些轮次重来，丢弃追加的对话。 */
+  rounds?: Round[];
+  addition?: string;
+  supplementOnly?: boolean;
+  answers?: Record<string, string>;
+  intro?: string;
+}
+/** 写回输入框之后：关闭卡片并提示，替换可撤销。 */
+export type WriteBack = (
+  how: "replace" | "append",
+  before: string,
+  revision: number,
+) => void;
+
+export function Enhance({
+  api,
+  t,
+  config,
+  mode,
+  notify,
+  onClose,
+  onWrite,
+  onEditFavorite,
+  ...composer
+}: ComposerInput & {
+  api: Api;
+  t: T;
+  config: Configuration;
+  mode: Mode;
+  notify: (text: string, action?: ToastMessage["action"]) => void;
+  onClose: () => void;
+  onWrite: WriteBack;
+  onEditFavorite: (id: string) => void;
+}) {
+  const saved = useRef(workflow(api, composer.sessionId || "", mode)).current;
+  const [result, setResult] = useState(saved.result),
+    [edited, setEdited] = useState(saved.edited),
+    [history, setHistory] = useState(saved.history),
+    [answers, setAnswers] = useState(saved.answers),
+    [questionIndex, setQuestionIndex] = useState(saved.questionIndex),
+    [intro, setIntro] = useState(saved.intro),
+    [messages, setMessages] = useState(saved.messages),
+    [supplement, setSupplement] = useState(saved.supplement),
+    [busy, setBusy] = useState<string | null>(null),
+    [other, setOther] = useState<string | null>(null);
+  const task = useTask(),
+    writer = useDraft(api, t, composer, undefined, saved);
+  const request = useRef<AbortController | null>(null),
+    generation = useRef(0),
+    restarting = useRef(false),
+    last = useRef<() => void>(() => {});
+  const title = t(mode === "grill" ? "grill" : "generate");
+  const selected =
+    result?.kind === "questions" ? result.questions[questionIndex] : undefined;
+  const answerFor = (id: string) =>
+    Object.hasOwn(answers, id) ? answers[id] : "";
+  const locked = writer.stale;
+  useEffect(() => {
+    Object.assign(saved, {
+      result,
+      edited,
+      history,
+      answers,
+      questionIndex,
+      intro,
+      messages,
+      supplement,
+      guard: writer.guard || undefined,
+      project: writer.origin.current,
+    });
+  });
+  function cancel() {
+    generation.current++;
+    request.current?.abort();
+    setBusy(null);
+  }
+  useEffect(() => {
+    if (!saved.started) void generate({ start: true });
+    return () => {
+      generation.current++;
+      request.current?.abort();
+    };
+  }, []);
+  // 生成途中输入框被改：作废这次请求。按新内容重来时锁定还没解除，不能把它也取消掉。
+  useEffect(() => {
+    if (locked && busy && !restarting.current) cancel();
+  }, [locked, busy]);
+  function busyText({ start, forceFinal, addition }: Run) {
+    if (mode === "rewrite")
+      return t(!start && addition ? "revising" : "rewriting");
+    if (forceFinal) return t(result?.kind === "final" ? "revising" : "writing");
+    return t("thinkingQuestions");
+  }
+
+  async function generate(run: Run = {}) {
+    const { start = false, forceFinal = false, supplementOnly = false } = run;
+    if (!start && locked) return;
+    const addition = run.addition ?? "";
+    const current = run.answers ?? answers;
+    let rounds = start ? [] : (run.rounds ?? history);
+    if (!start && run.rounds === undefined && result?.kind === "questions") {
+      const confirmed = result.questions
+        .filter((q) => (Object.hasOwn(current, q.id) ? current[q.id] : "").trim())
+        .map((q) => ({ questionId: q.id, answer: current[q.id].trim() }));
+      if (!supplementOnly || confirmed.length)
+        rounds = [...rounds, { questions: result.questions, answers: confirmed }];
+    }
+    const nextMessages =
+      start || run.rounds
+        ? []
+        : [
+            ...messages,
+            ...(supplementOnly && selected
+              ? [
+                  {
+                    role: "assistant" as const,
+                    text: JSON.stringify(selected),
+                    round: rounds.length,
+                  },
+                ]
+              : []),
+            ...(result?.text
+              ? [
+                  {
+                    role: "assistant" as const,
+                    text: edited || result.text,
+                    round: rounds.length,
+                  },
+                ]
+              : []),
+            ...(addition.trim()
+              ? [{ role: "user" as const, text: addition.trim(), round: rounds.length }]
+              : []),
+          ];
+    request.current?.abort();
+    const controller = new AbortController(),
+      token = ++generation.current;
+    request.current = controller;
+    last.current = () => void generate(run);
+    task.setError("");
+    setOther(null);
+    setBusy(busyText(run));
+    restarting.current = start;
+    try {
+      const guard = start
+        ? await writer.reset(controller.signal, mode === "grill")
+        : writer.guard;
+      if (!guard || token !== generation.current) return;
+      const introText = start ? "" : (run.intro ?? intro);
+      if (start) {
+        saved.started = false;
+        setResult(null);
+        setEdited("");
+        setHistory([]);
+        setMessages([]);
+        setAnswers({});
+        setQuestionIndex(0);
+        setIntro("");
+        setSupplement("");
+      }
+      const prompt = guard.draft.trim() ? guard.draft : introText;
+      // 输入框为空时「需求对齐」先问「你想做什么？」，不调用模型。
+      if (!prompt.trim()) {
+        if (mode === "rewrite") throw new Error(t("emptyDraft"));
+        saved.started = true;
+        return;
+      }
+      const output = await api.call<GenerationResult>(
+        "generate",
+        {
+          sessionId: guard.sessionId,
+          prompt,
+          mode,
+          scenario: "general",
+          history: rounds,
+          forceFinal,
+          messages: nextMessages.map(({ role, text }) => ({ role, text })),
+          currentText: start || run.rounds ? "" : edited,
+        },
+        controller.signal,
+      );
+      const live = writer.current.current;
+      if (
+        token !== generation.current ||
+        !live.input ||
+        !draftUnchanged(guard, live.sessionId, live.input)
+      )
+        return;
+      saved.started = true;
+      setIntro(introText);
+      setResult(output);
+      setEdited(output.text ?? "");
+      setHistory(rounds);
+      setMessages(nextMessages);
+      setSupplement("");
+      setAnswers({});
+      setQuestionIndex(0);
+    } catch (error) {
+      if (!controller.signal.aborted && token === generation.current)
+        task.setError((error as Error).message);
+    } finally {
+      if (token === generation.current) {
+        restarting.current = false;
+        setBusy(null);
+      }
+    }
+  }
+  /** 选中后自动进入下一题，一轮答完自动提交。 */
+  function pick(answer: string) {
+    if (!selected || !result || locked) return;
+    const next = { ...answers, [selected.id]: answer };
+    setAnswers(next);
+    setOther(null);
+    if (questionIndex < result.questions.length - 1)
+      setQuestionIndex(questionIndex + 1);
+    else void generate({ answers: next });
+  }
+  function editAnswers() {
+    const index = history.length - 1,
+      round = history[index];
+    if (!round || !result) return;
+    setHistory(history.slice(0, index));
+    setMessages(messages.filter((message) => (message.round ?? 0) <= index));
+    setEdited("");
+    setResult({ ...result, kind: "questions", text: "", questions: round.questions });
+    setAnswers(
+      Object.fromEntries(round.answers.map((a) => [a.questionId, a.answer])),
+    );
+    setQuestionIndex(0);
+    task.setError("");
+  }
+  // 追问时数字键选择选项，←/→ 切换题目；焦点在输入控件里时不拦截。
+  useEffect(() => {
+    if (!selected || busy || locked || other !== null) return;
+    const question = selected;
+    function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        target?.closest("input,textarea,select,[contenteditable=true]") ||
+        (target && target !== document.body && !target.closest(".pk-card"))
+      )
+        return;
+      const n = Number(event.key);
+      if (n >= 1 && n <= question.options.length)
+        pick(question.options[n - 1].label);
+      else if (n === question.options.length + 1) setOther(customAnswer(question));
+      else if (event.key === "ArrowRight") advance();
+      else if (event.key === "ArrowLeft" && questionIndex > 0)
+        setQuestionIndex(questionIndex - 1);
+      else return;
+      event.preventDefault();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  });
+  function customAnswer(question: Question) {
+    const answer = answerFor(question.id);
+    return question.options.some((o) => o.label === answer) ||
+      answer === t("skipAnswer")
+      ? ""
+      : answer;
+  }
+  /** ›：已答就前进，未答就交给模型决定。 */
+  function advance() {
+    if (!selected) return;
+    pick(answerFor(selected.id) || t("skipAnswer"));
+  }
+  async function saveFavorite() {
+    await task.perform(async () => {
+      const item = await api.call<{ id: string }>("favorites.add", {
+        body: edited,
+        sessionId: composer.sessionId || "",
+      });
+      notify(t("savedPrompt"), {
+        label: t("edit"),
+        run: () => onEditFavorite(item.id),
+      });
+    });
+  }
+  async function use(how: "copy" | "replace" | "append") {
+    await task.perform(async () => {
+      const before = writer.current.current.input?.draft ?? "";
+      const message = await writer.useText(edited, how);
+      if (how === "copy") notify(message);
+      else
+        onWrite(how, before, composer.inputActions!.captureInsertion().draftRev);
+    });
+  }
+  const view = busy
+    ? "busy"
+    : result?.kind === "questions" && selected
+      ? "questions"
+      : result?.kind === "summary"
+        ? "summary"
+        : result?.kind === "final"
+          ? "final"
+          : mode === "grill" &&
+              saved.started &&
+              !writer.guard?.draft.trim() &&
+              !task.error
+            ? "intro"
+            : "empty";
+  const round = history.length + 1;
+  const meta =
+    view === "questions"
+      ? format(t("round"), { n: round })
+      : view === "summary"
+        ? t("summaryMeta")
+        : view === "final"
+          ? t("resultMeta")
+          : "";
+  const files = result?.context.sections.flatMap((s) => s.files) ?? [];
+  const contextDetail = result?.context.sections
+    .map((s) =>
+      [
+        `${s.kind}: ${s.files.join(", ")}`,
+        ...s.skipped.map(
+          (reason) =>
+            reason.split(" / ")[api.language === "en" ? 1 : 0] || reason,
+        ),
+      ].join("\n"),
+    )
+    .join("\n\n");
+  const answered = selected
+    ? [
+        ...history.flatMap((r) =>
+          r.questions.map((q) => ({
+            question: q.question,
+            answer: r.answers.find((a) => a.questionId === q.id)?.answer ?? "",
+          })),
+        ),
+        ...result!.questions.slice(0, questionIndex).map((q) => ({
+          question: q.question,
+          answer: answerFor(q.id),
+        })),
+      ].filter((item) => item.answer)
+    : [];
+  const unsafe = !!composer.input && !replacementEdits(composer.input, edited);
+  const canWrite = !!composer.inputActions && !!writer.guard;
+  return (
+    <div className="pk-workflow">
+      <CardHeader title={title} meta={meta} t={t} onClose={onClose} />
+      {locked && (
+        <div className="pk-stale" role="status">
+          <span>{t("stale")}</span>
+          <button
+            type="button"
+            className="pk-link"
+            onClick={() => generate({ start: true })}
+          >
+            {t("restartWithDraft")}
+          </button>
+        </div>
+      )}
+      <div className="pk-body">
+        {view === "busy" && <Loading text={busy!} />}
+        {view === "empty" && !task.error && (
+          <Button onClick={() => generate({ start: true })}>
+            {t("restart")}
+          </Button>
+        )}
+        {view === "intro" && (
+          <>
+            <h3 className="pk-question">{t("intro")}</h3>
+            <input
+              className="pk-input"
+              aria-label={t("intro")}
+              placeholder={t("introPlaceholder")}
+              maxLength={20000}
+              autoFocus
+              disabled={locked}
+              onKeyDown={(event) => {
+                const value = event.currentTarget.value.trim();
+                if (event.key === "Enter" && !event.nativeEvent.isComposing && value)
+                  void generate({ intro: value });
+              }}
+            />
+          </>
+        )}
+        {view === "questions" && selected && (
+          <>
+            <div className="pk-question-row">
+              <h3 className="pk-question">{selected.question}</h3>
+              <IconButton
+                label={t("rephrase")}
+                disabled={locked}
+                onClick={() =>
+                  generate({ supplementOnly: true, addition: t("rephraseRequest") })
+                }
+              >
+                <RotateCw size={15} aria-hidden />
+              </IconButton>
+            </div>
+            <div
+              role="radiogroup"
+              aria-label={selected.question}
+              className="pk-options"
+            >
+              {selected.options.map((option, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  role="radio"
+                  className="pk-option"
+                  aria-checked={answerFor(selected.id) === option.label}
+                  disabled={locked}
+                  onClick={() => pick(option.label)}
+                >
+                  <span className="pk-option-number" aria-hidden>
+                    {index + 1}
+                  </span>
+                  <span>
+                    <strong>{option.label}</strong>
+                    {selected.recommended === index && (
+                      <span className="pk-badge">{t("recommended")}</span>
+                    )}
+                    {option.description && <small>{option.description}</small>}
+                  </span>
+                </button>
+              ))}
+              {other !== null ? (
+                <div className="pk-option pk-option-editing">
+                  <span className="pk-option-number" aria-hidden>
+                    {selected.options.length + 1}
+                  </span>
+                  <input
+                    aria-label={t("other")}
+                    placeholder={t("otherPlaceholder")}
+                    maxLength={3000}
+                    autoFocus
+                    value={other}
+                    onChange={(event) => setOther(event.target.value)}
+                    onBlur={() => !other.trim() && setOther(null)}
+                    onKeyDown={(event) => {
+                      if (event.nativeEvent.isComposing) return;
+                      if (event.key === "Enter" && other.trim()) {
+                        event.preventDefault();
+                        pick(other.trim());
+                      } else if (event.key === "Escape") {
+                        // 只收起输入框，不关闭卡片。
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setOther(null);
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  role="radio"
+                  className="pk-option"
+                  aria-checked={!!customAnswer(selected)}
+                  disabled={locked}
+                  onClick={() => setOther(customAnswer(selected))}
+                >
+                  <span className="pk-option-number" aria-hidden>
+                    {selected.options.length + 1}
+                  </span>
+                  <span>
+                    <strong>{customAnswer(selected) || t("other")}</strong>
+                  </span>
+                </button>
+              )}
+            </div>
+            {answered.length > 0 && (
+              <ul className="pk-answered">
+                {answered.map((item, index) => (
+                  <li key={index}>
+                    ✓ {item.question} <span>{item.answer}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+        {view === "summary" && (
+          <>
+            <p className="pk-caption">{t("summaryHint")}</p>
+            <div className="pk-summary">{edited}</div>
+          </>
+        )}
+        {view === "final" && (
+          <>
+            <textarea
+              className="pk-input pk-result"
+              aria-label={t("result")}
+              rows={10}
+              value={edited}
+              onChange={(e) => setEdited(e.target.value)}
+            />
+            <input
+              className="pk-input pk-follow"
+              aria-label={t("revise")}
+              placeholder={t("revise")}
+              maxLength={3000}
+              disabled={locked}
+              value={supplement}
+              onChange={(e) => setSupplement(e.target.value)}
+              onKeyDown={(event) => {
+                if (
+                  event.key === "Enter" &&
+                  !event.nativeEvent.isComposing &&
+                  supplement.trim()
+                )
+                  void generate({ forceFinal: true, addition: supplement });
+              }}
+            />
+            {files.length > 0 && (
+              <p className="pk-caption pk-context" title={contextDetail}>
+                {format(t("contextUsed"), {
+                  files: files.join(api.language === "en" ? ", " : "、"),
+                })}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+      <ErrorBar
+        error={task.error}
+        t={t}
+        onRetry={busy ? undefined : () => last.current()}
+      />
+      {view === "busy" && (
+        <footer className="pk-foot">
+          <span className="pk-grow" />
+          <Button onClick={cancel}>{t("cancel")}</Button>
+        </footer>
+      )}
+      {view === "questions" && selected && (
+        <footer className="pk-foot">
+          <span className="pk-pager">
+            <IconButton
+              label={t("previousQuestion")}
+              disabled={questionIndex === 0 || locked}
+              onClick={() => setQuestionIndex(questionIndex - 1)}
+            >
+              <ChevronLeft size={16} aria-hidden />
+            </IconButton>
+            <span>
+              {questionIndex + 1} / {result!.questions.length}
+            </span>
+            <IconButton
+              label={t("nextQuestion")}
+              title={
+                !answerFor(selected.id)
+                  ? t("skipQuestion")
+                  : questionIndex === result!.questions.length - 1
+                    ? t("submitRound")
+                    : t("nextQuestion")
+              }
+              disabled={locked}
+              onClick={advance}
+            >
+              <ChevronRight size={16} aria-hidden />
+            </IconButton>
+          </span>
+          <span className="pk-grow" />
+          <Button disabled={locked} onClick={() => generate({ forceFinal: true })}>
+            {t("direct")}
+          </Button>
+        </footer>
+      )}
+      {view === "summary" && (
+        <footer className="pk-foot">
+          {history.length > 0 && (
+            <button
+              type="button"
+              className="pk-link"
+              disabled={locked}
+              onClick={editAnswers}
+            >
+              ‹ {t("changeAnswers")}
+            </button>
+          )}
+          <span className="pk-grow" />
+          <Button
+            disabled={locked}
+            onClick={() => generate({ addition: t("askMoreRequest") })}
+          >
+            {t("askMore")}
+          </Button>
+          <Button
+            primary
+            disabled={locked}
+            onClick={() => generate({ forceFinal: true })}
+          >
+            {t("writePrompt")}
+          </Button>
+        </footer>
+      )}
+      {view === "final" && (
+        <footer className="pk-foot">
+          <IconButton
+            label={t("regenerate")}
+            disabled={locked}
+            onClick={() =>
+              generate({ forceFinal: mode === "grill", rounds: history })
+            }
+          >
+            <RotateCw size={16} aria-hidden />
+          </IconButton>
+          <IconButton
+            label={t("copy")}
+            disabled={!edited.trim()}
+            onClick={() => use("copy")}
+          >
+            <Copy size={16} aria-hidden />
+          </IconButton>
+          {config.settings.favoritesEnabled && (
+            <IconButton
+              label={t("savePrompt")}
+              disabled={!edited.trim()}
+              onClick={saveFavorite}
+            >
+              <Bookmark size={16} aria-hidden />
+            </IconButton>
+          )}
+          <span className="pk-grow" />
+          <Button
+            disabled={!edited.trim() || !canWrite}
+            onClick={() => use("append")}
+          >
+            {t("append")}
+          </Button>
+          <Button
+            primary
+            title={unsafe ? t("unsafeReplace") : undefined}
+            disabled={!edited.trim() || !canWrite || locked || unsafe}
+            onClick={() => use("replace")}
+          >
+            {t("replace")}
+          </Button>
+        </footer>
+      )}
+    </div>
+  );
+}
