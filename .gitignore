@@ -1,5 +1,8 @@
 node_modules/
 lib/
+!packages/promptkit/lib/
+!packages/promptkit/lib/**
+packages/promptkit/lib/**/*.tsbuildinfo
 dist/
 coverage/
 *.tsbuildinfo

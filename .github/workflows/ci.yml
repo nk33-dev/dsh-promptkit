@@ -18,6 +18,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm test
+      - name: Verify committed build output
+        if: runner.os == 'Linux'
+        run: pnpm build && git diff --exit-code -- packages/promptkit/lib
       - run: pnpm pack:plugin
       - uses: actions/upload-artifact@v4
         with:
