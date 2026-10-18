@@ -11,7 +11,7 @@
 
 ## 安装
 
-`pnpm` 从 `github:nk33-dev/dsh-promptkit#path:/packages/promptkit` 安装成功，产物包含 `lib/client.js`、`lib/index.js`、`lib/remote.js` 和类型声明。仓库已提交构建产物，安装时不需要执行构建脚本。
+`pnpm` 从 `github:nk33-dev/dsh-promptkit#path:/packages/promptkit` 安装成功，产物包含 `lib/client.js`、`lib/index.js`、`lib/remote.js` 和类型声明；安装后的客户端通过 `verifyClientBundle` 的模块工厂、入口注册和宿主模块白名单检查。仓库已提交构建产物，安装时不需要执行构建脚本。
 
 尚未通过 Harness 插件管理器重新安装并走完整个安装对话框；上面的结果是 pnpm 层验证。
 
