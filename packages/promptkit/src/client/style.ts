@@ -3,7 +3,9 @@ export const css = `
 .pk-tools{display:flex;align-items:center;gap:2px}
 .pk-tool,.pk-icon{display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}
 .pk-tool:hover,.pk-icon:hover:not(:disabled),.pk-tool[data-active]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}
-.pk-tool[aria-disabled=true]{opacity:.45;cursor:default}
+.pk-tool[aria-disabled=true]{opacity:.35;cursor:default;background:transparent}
+.pk-library-tool{order:0}.pk-enhance-tool{order:1}
+.pk-follow-row{display:flex;align-items:center;gap:8px;flex:none}.pk-follow-row .pk-follow{flex:1;min-width:0}
 .pk-tool svg,.pk-icon svg{display:block;flex:none}
 .pk-icon:disabled{opacity:.35;cursor:default}
 .pk-tool:focus-visible,.pk-icon:focus-visible,.pk-button:focus-visible,.pk-input:focus-visible,.pk-tab:focus-visible,.pk-chip:focus-visible,.pk-link:focus-visible,.pk-grip:focus-visible,.pk-row-main:focus-visible,.pk-option:focus-visible,.pk-mode-menu button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:1px}
@@ -54,7 +56,8 @@ export const css = `
 .pk-answered span{color:var(--dsw-alias-label-primary)}
 .pk-pager{display:inline-flex;align-items:center;gap:2px;color:var(--dsw-alias-label-secondary);font-size:12px}
 .pk-summary{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.75;padding:10px 12px;border-radius:8px;background:var(--dsw-alias-interactive-bg-hover)}
-.pk-result{resize:vertical;min-height:180px;line-height:1.65}
+.pk-body.is-result{overflow:hidden}
+.pk-result{flex:1 1 280px;resize:none;min-height:60px;border:0;background:transparent;padding:2px;line-height:1.75;overflow:auto}
 .pk-context{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
 .pk-toast{display:flex;align-items:center;gap:12px;padding:7px 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;white-space:nowrap}
 .pk-card>.pk-toast{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);z-index:1}

@@ -1,5 +1,9 @@
 import type { Context } from "@deepseek-ai/cordis";
-import { BlockAssembler } from "@deepseek-ai/dsh-llm";
+import {
+  BlockAssembler,
+  createAssistantMessage,
+  createUserMessage,
+} from "@deepseek-ai/dsh-llm";
 import { credentialRef } from "@deepseek-ai/dsh-credentials";
 import type {
   Settings,
@@ -13,6 +17,8 @@ import { GRILL_FORMAT, REFERENCE_BOUNDARY } from "../shared/defaults.ts";
 import { REWRITE_RULE, GRILL_RULE } from "../rules.ts";
 import { questionSchema } from "../shared/schemas.ts";
 import { z } from "zod";
+
+type ConversationMessage = { role: "user" | "assistant"; content: string };
 
 export function parseResult(
   raw: string,
@@ -96,12 +102,14 @@ export async function independentRequest(
   settings: Settings,
   key: string,
   system: string,
-  user: string,
+  user: string | ConversationMessage[],
   signal: AbortSignal,
   send: typeof fetch = fetch,
 ): Promise<{ text: string; protocol: string }> {
   if (!settings.baseUrl || !settings.model)
     throw new Error("请填写模型地址和名称 / Set model URL and name");
+  const conversation =
+    typeof user === "string" ? [{ role: "user", content: user }] : user;
   const protocols: Exclude<Protocol, "auto">[] =
     settings.protocol === "auto"
       ? ["chat_completions", "responses", "anthropic_messages"]
@@ -126,7 +134,10 @@ export async function independentRequest(
         ? {
             model: settings.model,
             instructions: system,
-            input: [{ role: "user", content: user }],
+            input: conversation,
+            ...(settings.reasoningEffort
+              ? { reasoning: { effort: settings.reasoningEffort } }
+              : {}),
             max_output_tokens: 4096,
             stream: false,
           }
@@ -137,7 +148,7 @@ export async function independentRequest(
               ...(protocol === "chat_completions"
                 ? [{ role: "system", content: system }]
                 : []),
-              { role: "user", content: user },
+              ...conversation,
             ],
             max_tokens: 4096,
             ...(settings.reasoningEffort && protocol !== "anthropic_messages"
@@ -173,6 +184,8 @@ export async function independentRequest(
       if (index < protocols.length - 1) continue;
       throw new Error("无法解析模型响应 / Could not parse the model response");
     }
+    if (data.choices?.[0]?.finish_reason === "length" || data.stop_reason === "max_tokens" || data.status === "incomplete")
+      throw new Error("模型输出未完成，请重试或缩短要求 / Model output is incomplete; retry or shorten your request");
     const text =
       protocol === "chat_completions"
         ? contentText(data.choices?.[0]?.message?.content)
@@ -223,6 +236,9 @@ export async function generate(
     preset?.rule,
     REFERENCE_BOUNDARY,
     request.mode === "grill" ? GRILL_FORMAT : "",
+    request.messages?.length || request.currentText
+      ? "后续 user 消息是修改要求；assistant 消息是旧稿。以 currentText 为底稿应用最新修改，返回完整新稿；forceFinal 为 true 时使用最终稿格式。"
+      : "",
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -233,10 +249,26 @@ export async function generate(
       text: s.text,
     })),
     previousRounds: request.history,
-    messages: request.messages || [],
     currentText: request.currentText || "",
     forceFinal,
   });
+  const conversation: ConversationMessage[] = [
+    { role: "user", content: user },
+    ...(request.messages || []).map(({ role, text }) => ({
+      role,
+      content: text,
+    })),
+  ];
+  if (
+    conversation.at(-1)?.role === "assistant" ||
+    (!request.messages?.length && request.currentText)
+  )
+    conversation.push({
+      role: "user",
+      content: forceFinal
+        ? "根据当前结果和已确认要求生成完整最终提示词。"
+        : "根据当前结果和已确认答案继续澄清需求。",
+    });
   let output: { text: string; protocol: string }, model: string;
   if (settings.connection === "independent") {
     const credential = await ctx.credentials.resolve(
@@ -250,7 +282,7 @@ export async function generate(
       settings,
       credential.value,
       system,
-      user,
+      conversation,
       signal,
     );
     model = settings.model;
@@ -273,7 +305,17 @@ export async function generate(
       model,
       reasoningEffort,
       system,
-      messages: [{ role: "user", content: [{ type: "text", text: user }] }],
+      messages: conversation.map(({ role, content }) =>
+        role === "assistant"
+          ? createAssistantMessage({
+              content: [{ type: "text", text: content }],
+              source: { provider, model },
+            })
+          : createUserMessage({
+              content: [{ type: "text", text: content }],
+              source: { kind: "user" },
+            }),
+      ),
       maxTokens: 8192,
       signal,
     })) {

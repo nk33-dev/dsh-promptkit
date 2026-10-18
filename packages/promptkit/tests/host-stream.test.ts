@@ -28,6 +28,37 @@ function context(chunks: StreamChunk[]) {
   };
 }
 describe("Harness stream integration", () => {
+  it("sends edits as native conversation turns with the current editable draft", async () => {
+    const { ctx, stream } = context([
+      { type: "block-end", index: 0, block: { type: "text", text: "Revised" } },
+      { type: "finish", reason: { kind: "stop" } },
+    ]);
+    await generate(
+      ctx,
+      defaultSettings(),
+      {
+        ...request,
+        currentText: "Manually edited",
+        messages: [
+          { role: "assistant", text: "Old result" },
+          { role: "user", text: "Add CSV" },
+        ],
+      },
+      { enabled: false, sections: [] },
+      DEFAULT_PRESETS,
+      new AbortController().signal,
+      { provider: "test", model: "model" },
+    );
+    const messages = stream.mock.calls[0][0].messages;
+    expect(JSON.parse(messages[0].content[0].text).currentText).toBe(
+      "Manually edited",
+    );
+    expect(messages.at(-1)).toMatchObject({
+      role: "user",
+      content: [{ type: "text", text: "Add CSV" }],
+    });
+    expect(messages[1].role).toBe("assistant");
+  });
   it("uses the canonical assembler for complete text blocks without deltas", async () => {
     const { ctx, stream } = context([
       {

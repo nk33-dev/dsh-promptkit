@@ -105,6 +105,7 @@ export function Enhance({
   function cancel() {
     generation.current++;
     request.current?.abort();
+    request.current = null;
     setBusy(null);
   }
   useEffect(() => {
@@ -126,6 +127,8 @@ export function Enhance({
   }
 
   async function generate(run: Run = {}) {
+    if (request.current && !request.current.signal.aborted && !run.start)
+      return;
     const { start = false, forceFinal = false, supplementOnly = false } = run;
     if (!start && locked) return;
     const addition = run.addition ?? "";
@@ -156,7 +159,7 @@ export function Enhance({
               ? [
                   {
                     role: "assistant" as const,
-                    text: edited || result.text,
+                    text: edited,
                     round: rounds.length,
                   },
                 ]
@@ -226,6 +229,10 @@ export function Enhance({
       setHistory(rounds);
       setMessages(nextMessages);
       setSupplement("");
+      if (addition.trim() && output.text?.trim() === edited.trim()) {
+        task.setError(t("unchangedResult"));
+        setSupplement(addition);
+      }
       setAnswers({});
       setQuestionIndex(0);
     } catch (error) {
@@ -233,6 +240,7 @@ export function Enhance({
         task.setError((error as Error).message);
     } finally {
       if (token === generation.current) {
+        request.current = null;
         restarting.current = false;
         setBusy(null);
       }
@@ -282,7 +290,11 @@ export function Enhance({
       if (n >= 1 && n <= question.options.length)
         pick(question.options[n - 1].label);
       else if (n === question.options.length + 1) setOther(customAnswer(question));
-      else if (event.key === "ArrowRight") advance();
+      else if (
+        event.key === "ArrowRight" &&
+        questionIndex < result!.questions.length - 1
+      )
+        advance();
       else if (event.key === "ArrowLeft" && questionIndex > 0)
         setQuestionIndex(questionIndex - 1);
       else return;
@@ -298,10 +310,12 @@ export function Enhance({
       ? ""
       : answer;
   }
-  /** ›：已答就前进，未答就交给模型决定。 */
+  /** 分页只切换题目；跳过通过独立按钮提交。 */
   function advance() {
-    if (!selected) return;
-    pick(answerFor(selected.id) || t("skipAnswer"));
+    if (!selected || !result || questionIndex >= result.questions.length - 1)
+      return;
+    setQuestionIndex(questionIndex + 1);
+    setOther(null);
   }
   async function saveFavorite() {
     await task.perform(async () => {
@@ -390,7 +404,7 @@ export function Enhance({
           </button>
         </div>
       )}
-      <div className="pk-body">
+      <div className={`pk-body${view === "final" ? " is-result" : ""}`}>
         {view === "busy" && <Loading text={busy!} />}
         {view === "empty" && !task.error && (
           <Button onClick={() => generate({ start: true })}>
@@ -408,9 +422,17 @@ export function Enhance({
               autoFocus
               disabled={locked}
               onKeyDown={(event) => {
+                event.stopPropagation();
                 const value = event.currentTarget.value.trim();
-                if (event.key === "Enter" && !event.nativeEvent.isComposing && value)
+                if (
+                  event.key === "Enter" &&
+                  !event.nativeEvent.isComposing &&
+                  event.keyCode !== 229 &&
+                  value
+                ) {
+                  event.preventDefault();
                   void generate({ intro: value });
+                }
               }}
             />
           </>
@@ -470,7 +492,12 @@ export function Enhance({
                     onChange={(event) => setOther(event.target.value)}
                     onBlur={() => !other.trim() && setOther(null)}
                     onKeyDown={(event) => {
-                      if (event.nativeEvent.isComposing) return;
+                      event.stopPropagation();
+                      if (
+                        event.nativeEvent.isComposing ||
+                        event.keyCode === 229
+                      )
+                        return;
                       if (event.key === "Enter" && other.trim()) {
                         event.preventDefault();
                         pick(other.trim());
@@ -527,23 +554,37 @@ export function Enhance({
               value={edited}
               onChange={(e) => setEdited(e.target.value)}
             />
-            <input
-              className="pk-input pk-follow"
-              aria-label={t("revise")}
-              placeholder={t("revise")}
-              maxLength={3000}
-              disabled={locked}
-              value={supplement}
-              onChange={(e) => setSupplement(e.target.value)}
-              onKeyDown={(event) => {
-                if (
-                  event.key === "Enter" &&
-                  !event.nativeEvent.isComposing &&
-                  supplement.trim()
-                )
-                  void generate({ forceFinal: true, addition: supplement });
-              }}
-            />
+            <div className="pk-follow-row">
+              <input
+                className="pk-input pk-follow"
+                aria-label={t("revise")}
+                placeholder={t("revise")}
+                maxLength={3000}
+                disabled={locked}
+                value={supplement}
+                onChange={(e) => setSupplement(e.target.value)}
+                onKeyDown={(event) => {
+                  event.stopPropagation();
+                  if (
+                    event.key === "Enter" &&
+                    !event.nativeEvent.isComposing &&
+                    event.keyCode !== 229 &&
+                    supplement.trim()
+                  ) {
+                    event.preventDefault();
+                    void generate({ forceFinal: true, addition: supplement });
+                  }
+                }}
+              />
+              <Button
+                disabled={locked || !supplement.trim()}
+                onClick={() =>
+                  generate({ forceFinal: true, addition: supplement })
+                }
+              >
+                {t("improve")}
+              </Button>
+            </div>
             {files.length > 0 && (
               <p className="pk-caption pk-context" title={contextDetail}>
                 {format(t("contextUsed"), {
@@ -580,21 +621,20 @@ export function Enhance({
             </span>
             <IconButton
               label={t("nextQuestion")}
-              title={
-                !answerFor(selected.id)
-                  ? t("skipQuestion")
-                  : questionIndex === result!.questions.length - 1
-                    ? t("submitRound")
-                    : t("nextQuestion")
-              }
-              disabled={locked}
+              disabled={locked || questionIndex >= result!.questions.length - 1}
               onClick={advance}
             >
               <ChevronRight size={16} aria-hidden />
             </IconButton>
           </span>
           <span className="pk-grow" />
-          <Button disabled={locked} onClick={() => generate({ forceFinal: true })}>
+          <Button disabled={locked} onClick={() => pick(t("skipAnswer"))}>
+            {t("skipQuestion")}
+          </Button>
+          <Button
+            disabled={locked}
+            onClick={() => generate({ forceFinal: true })}
+          >
             {t("direct")}
           </Button>
         </footer>
@@ -633,7 +673,7 @@ export function Enhance({
             label={t("regenerate")}
             disabled={locked}
             onClick={() =>
-              generate({ forceFinal: mode === "grill", rounds: history })
+              generate({ forceFinal: true, addition: t("regenerateRequest") })
             }
           >
             <RotateCw size={16} aria-hidden />

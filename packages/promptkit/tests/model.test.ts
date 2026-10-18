@@ -18,6 +18,15 @@ const question = {
 };
 describe("model protocols and question boundaries", () => {
   it.each([
+    ["chat_completions", { choices: [{ finish_reason: "length", message: { content: "partial" } }] }],
+    ["responses", { status: "incomplete", output_text: "partial" }],
+    ["anthropic_messages", { stop_reason: "max_tokens", content: [{ type: "text", text: "partial" }] }],
+  ] as const)("rejects truncated output from %s", async (protocol, body) => {
+    const send = vi.fn(async () => new Response(JSON.stringify(body)));
+    await expect(independentRequest({ ...defaultSettings(), baseUrl: "https://example.test/v1", model: "m", protocol }, "key", "system", "draft", new AbortController().signal, send)).rejects.toThrow("输出未完成");
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+  it.each([
     [
       "chat_completions",
       { choices: [{ message: { content: "result" } }] },
@@ -55,14 +64,18 @@ describe("model protocols and question boundaries", () => {
     expect(send.mock.calls[0][0]).toBe(`https://example.test/v1/${path}`);
   });
   it("sends the configured reasoning effort on OpenAI-compatible protocols only", async () => {
-    const body = async (protocol: "chat_completions" | "anthropic_messages") => {
+    const body = async (
+      protocol: "chat_completions" | "anthropic_messages" | "responses",
+    ) => {
       const send = vi.fn(
         async () =>
           new Response(
             JSON.stringify(
-              protocol === "chat_completions"
-                ? { choices: [{ message: { content: "ok" } }] }
-                : { content: [{ type: "text", text: "ok" }] },
+              protocol === "responses"
+                ? { output_text: "ok" }
+                : protocol === "chat_completions"
+                  ? { choices: [{ message: { content: "ok" } }] }
+                  : { content: [{ type: "text", text: "ok" }] },
             ),
             { status: 200 },
           ),
@@ -84,8 +97,47 @@ describe("model protocols and question boundaries", () => {
       return JSON.parse(send.mock.calls[0][1]!.body as string);
     };
     expect((await body("chat_completions")).reasoning_effort).toBe("high");
+    expect((await body("responses")).reasoning).toEqual({ effort: "high" });
     expect((await body("anthropic_messages")).reasoning_effort).toBeUndefined();
   });
+  it.each(["chat_completions", "responses", "anthropic_messages"] as const)(
+    "preserves follow-up roles in %s",
+    async (protocol) => {
+      const send = vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify(
+              protocol === "responses"
+                ? { output_text: "Revised" }
+                : protocol === "anthropic_messages"
+                  ? { content: [{ type: "text", text: "Revised" }] }
+                  : { choices: [{ message: { content: "Revised" } }] },
+            ),
+          ),
+      );
+      const conversation = [
+        { role: "user" as const, content: "Draft" },
+        { role: "assistant" as const, content: "Old prompt" },
+        { role: "user" as const, content: "Add CSV" },
+      ];
+      await independentRequest(
+        {
+          ...defaultSettings(),
+          baseUrl: "https://example.test/v1",
+          model: "test",
+          protocol,
+        },
+        "key",
+        "system",
+        conversation,
+        new AbortController().signal,
+        send,
+      );
+      const body = JSON.parse(send.mock.calls[0][1]!.body as string);
+      const messages = protocol === "responses" ? body.input : body.messages;
+      expect(messages.slice(-3)).toEqual(conversation);
+    },
+  );
   it("falls back after unsupported endpoints and retains the API prefix", async () => {
     const send = vi
       .fn()

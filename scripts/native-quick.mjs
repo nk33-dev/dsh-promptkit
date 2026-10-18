@@ -3,7 +3,7 @@ import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { connect } from "./cdp.mjs";
 import { resolve } from "node:path";
 const report = {
-  version: "0.1.2",
+  version: "0.1.3",
   kind: "Windows Harness UI with deterministic local model",
   checks: [],
   requests: 0,

@@ -228,25 +228,32 @@ describe("entry", () => {
     expect(screen.queryByRole("menu")).toBeNull();
     expect(generations()).toHaveLength(1);
   });
-  it("disables enhancement on an empty draft and asks what to do when clarifying", async () => {
-    const { generations } = setup(async () => questions, config, false, {
-      ...input,
-      draft: "",
-    } as InputState);
-    fireEvent.click(await screen.findByRole("button", { name: en.generate }));
-    const rewrite = screen.getByRole("menuitem", {
-      name: new RegExp(en.generate),
-    });
-    expect(rewrite.getAttribute("aria-disabled")).toBe("true");
-    fireEvent.click(rewrite);
-    expect(screen.getByRole("menu")).toBeTruthy();
-    fireEvent.click(
-      screen.getByRole("menuitem", { name: new RegExp(en.grill) }),
+  it("disables the entry on whitespace and enables it as the draft changes", async () => {
+    const { generations, props, rerender } = setup(
+      async () => questions,
+      config,
+      false,
+      {
+        ...input,
+        draft: " \n ",
+      } as InputState,
     );
-    const intro = await screen.findByLabelText(en.intro);
+    const trigger = (await screen.findByRole("button", {
+      name: en.generate,
+    })) as HTMLButtonElement;
+    expect(trigger.disabled).toBe(true);
+    fireEvent.click(trigger);
+    expect(screen.queryByRole("menu")).toBeNull();
     expect(generations()).toHaveLength(0);
-    fireEvent.change(intro, { target: { value: "A library system" } });
-    fireEvent.keyDown(intro, { key: "Enter" });
+    expect(
+      (screen.getByRole("button", { name: en.library }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+    rerender(
+      <App {...props} input={{ ...input, draft: "A library system" }} />,
+    );
+    expect(trigger.disabled).toBe(false);
+    await start();
     await option(/Core only/);
     expect((generations()[0][1] as any).prompt).toBe("A library system");
   });
@@ -288,13 +295,23 @@ describe("clarify needs", () => {
       "Everything",
     ]);
   });
-  it("skips with › and lets the model decide", async () => {
+  it("disables next on the last question and skips explicitly", async () => {
     const { generations } = setup(async () =>
       generations().length === 1 ? questions : final,
     );
     await start();
     await option(/Core only/);
+    expect(
+      (
+        screen.getByRole("button", {
+          name: en.nextQuestion,
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: en.nextQuestion }));
+    fireEvent.keyDown(document.body, { key: "ArrowRight" });
+    expect(generations()).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: en.skipQuestion }));
     await screen.findByLabelText(en.result);
     expect((generations()[1][1] as any).history[0].answers[0].answer).toBe(
       en.skipAnswer,
@@ -414,6 +431,37 @@ describe("clarify needs", () => {
   });
 });
 describe("result", () => {
+  it("applies successive edits, retains them on regenerate and reports unchanged output", async () => {
+    let count = 0;
+    const { generations } = setup(async () => ({
+      ...final,
+      text: ++count === 1 ? "Library" : "Library with CSV",
+    }));
+    await start("rewrite");
+    const result = await screen.findByLabelText(en.result);
+    fireEvent.change(result, { target: { value: "Personal library" } });
+    const follow = screen.getByLabelText(en.revise);
+    expect(
+      (screen.getByRole("button", { name: en.improve }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    fireEvent.change(follow, { target: { value: "Add CSV" } });
+    fireEvent.keyDown(follow, { key: "Enter", isComposing: true });
+    expect(generations()).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: en.improve }));
+    await waitFor(() =>
+      expect(
+        (screen.getByLabelText(en.result) as HTMLTextAreaElement).value,
+      ).toBe("Library with CSV"),
+    );
+    expect((generations()[1][1] as any).currentText).toBe("Personal library");
+    fireEvent.click(screen.getByRole("button", { name: en.regenerate }));
+    await screen.findByRole("alert");
+    expect(screen.getByRole("alert").textContent).toContain(en.unchangedResult);
+    expect(
+      (generations()[2][1] as any).messages.map((m: any) => m.text),
+    ).toContain("Add CSV");
+  });
   it("sends follow-up changes with the edited text", async () => {
     const { generations } = setup();
     await start("rewrite");
@@ -668,9 +716,9 @@ describe("management", () => {
       en.credentialRef,
     )) as HTMLSelectElement;
     await waitFor(() =>
-      expect(
-        [...select.options].some((o) => o.value === "NEW_API_KEY"),
-      ).toBe(true),
+      expect([...select.options].some((o) => o.value === "NEW_API_KEY")).toBe(
+        true,
+      ),
     );
     expect(
       [...select.options].find((o) => o.value === "NEW_API_KEY")?.textContent,

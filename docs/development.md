@@ -41,3 +41,11 @@ pnpm pack:plugin
 浏览器客户端通过 Harness 模块表加载，不能直接读取插件的 node_modules；`tsdown.client.config.ts` 只把 Lucide 内联，其他外部模块由宿主提供。
 
 规则与追问流程移植自同一作者的 Codex3N，参考提交 `f9ac5a3711022a057d42a03b7afe3d3176379d89`。宿主 SDK 与第三方运行依赖保留各自许可，插件代码采用 MIT。
+
+## 提示词模块同步
+
+与 Codex3N 的 `docs/prompt-enhance.md` 保持行为契约一致。`rules/rewrite.md`、`rules/grill.md` 分别对应其 `assets/prompt-enhance/system-prompt.md`、`grill-system-prompt.md`，内容相同。改规则时两边一起更新，不在运行时依赖另一个仓库。
+
+Harness 继续使用官方输入框槽位、InputActions、消息工厂和 BlockAssembler；独立服务保留三种协议适配。后续修改按 user/assistant 消息发送，currentText 保存用户当前编辑稿。Responses 用 `reasoning.effort`，Chat Completions 用 `reasoning_effort`。空草稿禁用入口，末题禁用下一题，跳过独立；改进支持按钮和回车、输入法保护、错误重试和无变化提示，重新生成保留补充要求。原生 popover 随窗口尺寸与滚动定位。
+
+规则参考 OpenAI 当前模型指南、Anthropic Claude 5 上下文设计，以及宝玉的提示词评估方法和 Simon Willison 的实际执行验证方法。来源和语义回归用例见 Codex3N 文档；不把角色模板、长示例和固定执行步骤塞进每次请求。用户自定义规则保持不变，清空规则字段后使用内置版本。

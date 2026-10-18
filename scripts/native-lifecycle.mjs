@@ -1,7 +1,7 @@
 import { connect } from "./cdp.mjs";
 import { writeFile } from "node:fs/promises";
 const page = await connect(),
-  report = { version: "0.1.2", checks: [], errors: [] };
+  report = { version: "0.1.3", checks: [], errors: [] };
 const assert = (v, m) => {
   if (!v) throw Error(m);
   report.checks.push(m);
@@ -38,8 +38,8 @@ try {
     `(()=>{document.querySelector('button[aria-label="返回插件"]')?.click();return true})()`,
   );
   await label("查看 PromptKit 提示词助手");
-  await wait(`document.body.innerText.includes('0.1.2')`);
-  assert(true, "Archive version 0.1.2 is installed");
+  await wait(`document.body.innerText.includes('0.1.3')`);
+  assert(true, "Archive version 0.1.3 is installed");
   await label("启用 PromptKit 提示词助手");
   await wait(
     `!document.querySelector('style[data-plugin*=promptkit]')&&[...document.querySelectorAll('button')].some(b=>b.getAttribute('aria-label')==='启用 PromptKit 提示词助手'&&b.getAttribute('aria-checked')==='false'&&!b.disabled)`,

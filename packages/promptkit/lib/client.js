@@ -808,14 +808,14 @@ window.__ModuleLoader__.load({
 			recommended: "Recommended",
 			previousQuestion: "Previous question",
 			nextQuestion: "Next question",
-			skipQuestion: "Skip and let the model decide",
+			skipQuestion: "Skip question",
 			submitRound: "Submit this round",
 			skipAnswer: "Not sure; you decide",
 			rephrase: "Ask a different question",
 			rephraseRequest: "I did not understand this question. Explain it with a concrete example and clearly different choices.",
-			direct: "Stop asking, write it",
-			summaryMeta: "Requirements look clear",
-			summaryHint: "If this looks right, write the prompt. Ask more if something is missing.",
+			direct: "Generate now",
+			summaryMeta: "Review requirements",
+			summaryHint: "Confirm the requirements to generate a prompt.",
 			changeAnswers: "Change answers",
 			askMore: "Ask more",
 			askMoreRequest: "Some details are still unclear. Keep asking questions.",
@@ -823,7 +823,10 @@ window.__ModuleLoader__.load({
 			supplement: "Anything to add? Press Enter",
 			result: "Result",
 			resultMeta: "Edit freely",
-			revise: "What else should change? Press Enter",
+			revise: "What should change?",
+			improve: "Improve",
+			unchangedResult: "The model returned the same text. Adjust your request or retry.",
+			regenerateRequest: "Generate the complete prompt again, retaining the confirmed requirements.",
 			regenerate: "Generate again",
 			copy: "Copy",
 			copied: "Copied",
@@ -943,14 +946,14 @@ window.__ModuleLoader__.load({
 			recommended: "推荐",
 			previousQuestion: "上一题",
 			nextQuestion: "下一题",
-			skipQuestion: "跳过，让模型决定",
+			skipQuestion: "跳过此题",
 			submitRound: "提交这一轮",
 			skipAnswer: "没想好，你看着定",
 			rephrase: "换个问题",
 			rephraseRequest: "这道题没看懂，请用具体例子重新解释，让选项的区别更清楚。",
-			direct: "不问了，直接写",
-			summaryMeta: "需求已经够清楚了",
-			summaryHint: "确认没问题就写提示词，有遗漏可以接着问。",
+			direct: "直接生成",
+			summaryMeta: "待确认",
+			summaryHint: "确认需求后生成提示词",
 			changeAnswers: "改答案",
 			askMore: "接着问",
 			askMoreRequest: "还有没问清楚的地方，请继续提问。",
@@ -958,7 +961,10 @@ window.__ModuleLoader__.load({
 			supplement: "还要补充什么？回车继续",
 			result: "结果",
 			resultMeta: "可以直接修改",
-			revise: "还想改哪里？回车继续",
+			revise: "还想改哪里？",
+			improve: "改进",
+			unchangedResult: "模型未改动结果，可调整要求后重试",
+			regenerateRequest: "按已确认的要求重新生成完整提示词。",
 			regenerate: "重新生成",
 			copy: "复制",
 			copied: "已复制",
@@ -1345,6 +1351,7 @@ window.__ModuleLoader__.load({
 			function cancel() {
 				generation.current++;
 				request.current?.abort();
+				request.current = null;
 				setBusy(null);
 			}
 			(0, react.useEffect)(() => {
@@ -1363,6 +1370,7 @@ window.__ModuleLoader__.load({
 				return t("thinkingQuestions");
 			}
 			async function generate(run = {}) {
+				if (request.current && !request.current.signal.aborted && !run.start) return;
 				const { start = false, forceFinal = false, supplementOnly = false } = run;
 				if (!start && locked) return;
 				const addition = run.addition ?? "";
@@ -1387,7 +1395,7 @@ window.__ModuleLoader__.load({
 					}] : [],
 					...result?.text ? [{
 						role: "assistant",
-						text: edited || result.text,
+						text: edited,
 						round: rounds.length
 					}] : [],
 					...addition.trim() ? [{
@@ -1447,12 +1455,17 @@ window.__ModuleLoader__.load({
 					setHistory(rounds);
 					setMessages(nextMessages);
 					setSupplement("");
+					if (addition.trim() && output.text?.trim() === edited.trim()) {
+						task.setError(t("unchangedResult"));
+						setSupplement(addition);
+					}
 					setAnswers({});
 					setQuestionIndex(0);
 				} catch (error) {
 					if (!controller.signal.aborted && token === generation.current) task.setError(error.message);
 				} finally {
 					if (token === generation.current) {
+						request.current = null;
 						restarting.current = false;
 						setBusy(null);
 					}
@@ -1495,7 +1508,7 @@ window.__ModuleLoader__.load({
 					const n = Number(event.key);
 					if (n >= 1 && n <= question.options.length) pick(question.options[n - 1].label);
 					else if (n === question.options.length + 1) setOther(customAnswer(question));
-					else if (event.key === "ArrowRight") advance();
+					else if (event.key === "ArrowRight" && questionIndex < result.questions.length - 1) advance();
 					else if (event.key === "ArrowLeft" && questionIndex > 0) setQuestionIndex(questionIndex - 1);
 					else return;
 					event.preventDefault();
@@ -1507,10 +1520,11 @@ window.__ModuleLoader__.load({
 				const answer = answerFor(question.id);
 				return question.options.some((o) => o.label === answer) || answer === t("skipAnswer") ? "" : answer;
 			}
-			/** ›：已答就前进，未答就交给模型决定。 */
+			/** 分页只切换题目；跳过通过独立按钮提交。 */
 			function advance() {
-				if (!selected) return;
-				pick(answerFor(selected.id) || t("skipAnswer"));
+				if (!selected || !result || questionIndex >= result.questions.length - 1) return;
+				setQuestionIndex(questionIndex + 1);
+				setOther(null);
 			}
 			async function saveFavorite() {
 				await task.perform(async () => {
@@ -1566,7 +1580,7 @@ window.__ModuleLoader__.load({
 						})]
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: "pk-body",
+						className: `pk-body${view === "final" ? " is-result" : ""}`,
 						children: [
 							view === "busy" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Loading, { text: busy }),
 							view === "empty" && !task.error && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
@@ -1584,8 +1598,12 @@ window.__ModuleLoader__.load({
 								autoFocus: true,
 								disabled: locked,
 								onKeyDown: (event) => {
+									event.stopPropagation();
 									const value = event.currentTarget.value.trim();
-									if (event.key === "Enter" && !event.nativeEvent.isComposing && value) generate({ intro: value });
+									if (event.key === "Enter" && !event.nativeEvent.isComposing && event.keyCode !== 229 && value) {
+										event.preventDefault();
+										generate({ intro: value });
+									}
 								}
 							})] }),
 							view === "questions" && selected && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
@@ -1645,7 +1663,8 @@ window.__ModuleLoader__.load({
 											onChange: (event) => setOther(event.target.value),
 											onBlur: () => !other.trim() && setOther(null),
 											onKeyDown: (event) => {
-												if (event.nativeEvent.isComposing) return;
+												event.stopPropagation();
+												if (event.nativeEvent.isComposing || event.keyCode === 229) return;
 												if (event.key === "Enter" && other.trim()) {
 													event.preventDefault();
 													pick(other.trim());
@@ -1695,20 +1714,34 @@ window.__ModuleLoader__.load({
 									value: edited,
 									onChange: (e) => setEdited(e.target.value)
 								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-									className: "pk-input pk-follow",
-									"aria-label": t("revise"),
-									placeholder: t("revise"),
-									maxLength: 3e3,
-									disabled: locked,
-									value: supplement,
-									onChange: (e) => setSupplement(e.target.value),
-									onKeyDown: (event) => {
-										if (event.key === "Enter" && !event.nativeEvent.isComposing && supplement.trim()) generate({
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: "pk-follow-row",
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+										className: "pk-input pk-follow",
+										"aria-label": t("revise"),
+										placeholder: t("revise"),
+										maxLength: 3e3,
+										disabled: locked,
+										value: supplement,
+										onChange: (e) => setSupplement(e.target.value),
+										onKeyDown: (event) => {
+											event.stopPropagation();
+											if (event.key === "Enter" && !event.nativeEvent.isComposing && event.keyCode !== 229 && supplement.trim()) {
+												event.preventDefault();
+												generate({
+													forceFinal: true,
+													addition: supplement
+												});
+											}
+										}
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+										disabled: locked || !supplement.trim(),
+										onClick: () => generate({
 											forceFinal: true,
 											addition: supplement
-										});
-									}
+										}),
+										children: t("improve")
+									})]
 								}),
 								files.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 									className: "pk-caption pk-context",
@@ -1752,8 +1785,7 @@ window.__ModuleLoader__.load({
 									] }),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconButton, {
 										label: t("nextQuestion"),
-										title: !answerFor(selected.id) ? t("skipQuestion") : questionIndex === result.questions.length - 1 ? t("submitRound") : t("nextQuestion"),
-										disabled: locked,
+										disabled: locked || questionIndex >= result.questions.length - 1,
 										onClick: advance,
 										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChevronRight, {
 											size: 16,
@@ -1763,6 +1795,11 @@ window.__ModuleLoader__.load({
 								]
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: "pk-grow" }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+								disabled: locked,
+								onClick: () => pick(t("skipAnswer")),
+								children: t("skipQuestion")
+							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
 								disabled: locked,
 								onClick: () => generate({ forceFinal: true }),
@@ -1801,8 +1838,8 @@ window.__ModuleLoader__.load({
 								label: t("regenerate"),
 								disabled: locked,
 								onClick: () => generate({
-									forceFinal: mode === "grill",
-									rounds: history
+									forceFinal: true,
+									addition: t("regenerateRequest")
 								}),
 								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RotateCw, {
 									size: 16,
@@ -2363,7 +2400,7 @@ window.__ModuleLoader__.load({
 						element.style.top = `${rect.top - bounds.height - 8 >= 8 ? rect.top - bounds.height - 8 : rect.bottom + 8}px`;
 						return;
 					}
-					const box = composer.getBoundingClientRect(), width = Math.min(box.width, innerWidth - 16), room = box.top - 16;
+					const box = composer.getBoundingClientRect(), width = Math.max(0, Math.min(box.width, innerWidth - 16)), room = box.top - 16;
 					element.style.width = `${width}px`;
 					element.style.left = `${Math.max(8, Math.min(box.left, innerWidth - width - 8))}px`;
 					if (room >= 240) {
@@ -2371,9 +2408,10 @@ window.__ModuleLoader__.load({
 						element.style.top = "auto";
 						element.style.bottom = `${innerHeight - box.top + 8}px`;
 					} else {
-						element.style.maxHeight = `${innerHeight * .62}px`;
-						element.style.bottom = "auto";
-						element.style.top = "8px";
+						const below = innerHeight - box.bottom - 16;
+						element.style.maxHeight = `${Math.max(0, Math.min(below >= 240 ? below : innerHeight - 16, innerHeight * .62))}px`;
+						element.style.bottom = below >= 240 ? "auto" : "8px";
+						element.style.top = below >= 240 ? `${box.bottom + 8}px` : "auto";
 					}
 				}
 				const toggle = (event) => {
@@ -2386,11 +2424,13 @@ window.__ModuleLoader__.load({
 				observer.observe(element);
 				observer.observe(composer);
 				window.addEventListener("resize", position);
+				window.addEventListener("scroll", position, true);
 				if (focusFirst) element.querySelector("[role=menuitem],.pk-body input,.pk-body textarea,.pk-body button,.pk-foot button")?.focus();
 				return () => {
 					element.removeEventListener("toggle", toggle);
 					observer.disconnect();
 					window.removeEventListener("resize", position);
+					window.removeEventListener("scroll", position, true);
 					element.hidePopover();
 					if (element.contains(document.activeElement) && before?.isConnected) before.focus();
 				};
@@ -2464,8 +2504,12 @@ window.__ModuleLoader__.load({
 			const favorites = !!config?.settings.favoritesEnabled;
 			const emptyDraft = !composer.input?.draft.trim();
 			(0, react.useEffect)(() => {
-				if (scene?.kind === "library" && !favorites || scene?.kind === "enhance" && !modes.includes(scene.mode) || scene?.kind === "menu" && modes.length < 2) close();
-			}, [config, scene]);
+				if (scene?.kind === "library" && !favorites || scene?.kind === "enhance" && !modes.includes(scene.mode) || scene?.kind === "menu" && (modes.length < 2 || emptyDraft)) close();
+			}, [
+				config,
+				scene,
+				emptyDraft
+			]);
 			(0, react.useEffect)(() => {
 				close();
 				clear();
@@ -2499,18 +2543,19 @@ window.__ModuleLoader__.load({
 			};
 			const single = modes.length === 1 ? modes[0] : null;
 			const enhanceLabel = t(single === "grill" ? "grill" : "generate");
-			const singleBlocked = single === "rewrite" && emptyDraft;
+			const singleBlocked = emptyDraft;
 			const toastView = toast && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Toast, { toast });
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "pk-tools",
 				children: [
 					modes.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						type: "button",
-						className: "pk-tool",
+						className: "pk-tool pk-enhance-tool",
 						"data-active": entry === "enhance" || void 0,
 						title: singleBlocked ? t("emptyDraftHint") : enhanceLabel,
 						"aria-label": enhanceLabel,
 						"aria-disabled": singleBlocked || void 0,
+						disabled: singleBlocked,
 						"aria-expanded": entry === "enhance",
 						"aria-haspopup": single ? "dialog" : "menu",
 						onPointerDown: () => pressedOpen.current = entry === "enhance",
@@ -2525,7 +2570,7 @@ window.__ModuleLoader__.load({
 					}),
 					favorites && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						type: "button",
-						className: "pk-tool",
+						className: "pk-tool pk-library-tool",
 						"data-active": entry === "library" || void 0,
 						title: t("library"),
 						"aria-label": t("library"),
@@ -2553,6 +2598,7 @@ window.__ModuleLoader__.load({
 									type: "button",
 									role: "menuitem",
 									"aria-disabled": blocked || void 0,
+									disabled: blocked,
 									title: blocked ? t("emptyDraftHint") : void 0,
 									onClick: () => !blocked && setScene({
 										kind: "enhance",
@@ -3021,7 +3067,9 @@ window.__ModuleLoader__.load({
 .pk-tools{display:flex;align-items:center;gap:2px}
 .pk-tool,.pk-icon{display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}
 .pk-tool:hover,.pk-icon:hover:not(:disabled),.pk-tool[data-active]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}
-.pk-tool[aria-disabled=true]{opacity:.45;cursor:default}
+.pk-tool[aria-disabled=true]{opacity:.35;cursor:default;background:transparent}
+.pk-library-tool{order:0}.pk-enhance-tool{order:1}
+.pk-follow-row{display:flex;align-items:center;gap:8px;flex:none}.pk-follow-row .pk-follow{flex:1;min-width:0}
 .pk-tool svg,.pk-icon svg{display:block;flex:none}
 .pk-icon:disabled{opacity:.35;cursor:default}
 .pk-tool:focus-visible,.pk-icon:focus-visible,.pk-button:focus-visible,.pk-input:focus-visible,.pk-tab:focus-visible,.pk-chip:focus-visible,.pk-link:focus-visible,.pk-grip:focus-visible,.pk-row-main:focus-visible,.pk-option:focus-visible,.pk-mode-menu button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:1px}
@@ -3072,7 +3120,8 @@ window.__ModuleLoader__.load({
 .pk-answered span{color:var(--dsw-alias-label-primary)}
 .pk-pager{display:inline-flex;align-items:center;gap:2px;color:var(--dsw-alias-label-secondary);font-size:12px}
 .pk-summary{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.75;padding:10px 12px;border-radius:8px;background:var(--dsw-alias-interactive-bg-hover)}
-.pk-result{resize:vertical;min-height:180px;line-height:1.65}
+.pk-body.is-result{overflow:hidden}
+.pk-result{flex:1 1 280px;resize:none;min-height:60px;border:0;background:transparent;padding:2px;line-height:1.75;overflow:auto}
 .pk-context{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
 .pk-toast{display:flex;align-items:center;gap:12px;padding:7px 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;white-space:nowrap}
 .pk-card>.pk-toast{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);z-index:1}

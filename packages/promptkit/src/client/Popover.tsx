@@ -47,7 +47,7 @@ export function Popover({
         return;
       }
       const box = composer.getBoundingClientRect(),
-        width = Math.min(box.width, innerWidth - 16),
+        width = Math.max(0, Math.min(box.width, innerWidth - 16)),
         room = box.top - 16;
       element.style.width = `${width}px`;
       element.style.left = `${Math.max(8, Math.min(box.left, innerWidth - width - 8))}px`;
@@ -56,9 +56,10 @@ export function Popover({
         element.style.top = "auto";
         element.style.bottom = `${innerHeight - box.top + 8}px`;
       } else {
-        element.style.maxHeight = `${innerHeight * 0.62}px`;
-        element.style.bottom = "auto";
-        element.style.top = "8px";
+        const below = innerHeight - box.bottom - 16;
+        element.style.maxHeight = `${Math.max(0, Math.min(below >= 240 ? below : innerHeight - 16, innerHeight * 0.62))}px`;
+        element.style.bottom = below >= 240 ? "auto" : "8px";
+        element.style.top = below >= 240 ? `${box.bottom + 8}px` : "auto";
       }
     }
     const toggle = (event: Event) => {
@@ -71,6 +72,7 @@ export function Popover({
     observer.observe(element);
     observer.observe(composer);
     window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
     if (focusFirst)
       element
         .querySelector<HTMLElement>(
@@ -81,6 +83,7 @@ export function Popover({
       element.removeEventListener("toggle", toggle);
       observer.disconnect();
       window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
       element.hidePopover();
       if (element.contains(document.activeElement) && before?.isConnected)
         before.focus();

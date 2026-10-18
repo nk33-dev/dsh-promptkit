@@ -69,10 +69,10 @@ export function App({
     if (
       (scene?.kind === "library" && !favorites) ||
       (scene?.kind === "enhance" && !modes.includes(scene.mode)) ||
-      (scene?.kind === "menu" && modes.length < 2)
+      (scene?.kind === "menu" && (modes.length < 2 || emptyDraft))
     )
       close();
-  }, [config, scene]);
+  }, [config, scene, emptyDraft]);
   useEffect(() => {
     close();
     clear();
@@ -114,18 +114,19 @@ export function App({
   };
   const single = modes.length === 1 ? modes[0] : null;
   const enhanceLabel = t(single === "grill" ? "grill" : "generate");
-  const singleBlocked = single === "rewrite" && emptyDraft;
+  const singleBlocked = emptyDraft;
   const toastView = toast && <Toast toast={toast} />;
   return (
     <div className="pk-tools">
       {modes.length > 0 && (
         <button
           type="button"
-          className="pk-tool"
+          className="pk-tool pk-enhance-tool"
           data-active={entry === "enhance" || undefined}
           title={singleBlocked ? t("emptyDraftHint") : enhanceLabel}
           aria-label={enhanceLabel}
           aria-disabled={singleBlocked || undefined}
+          disabled={singleBlocked}
           aria-expanded={entry === "enhance"}
           aria-haspopup={single ? "dialog" : "menu"}
           onPointerDown={() => (pressedOpen.current = entry === "enhance")}
@@ -140,7 +141,7 @@ export function App({
       {favorites && (
         <button
           type="button"
-          className="pk-tool"
+          className="pk-tool pk-library-tool"
           data-active={entry === "library" || undefined}
           title={t("library")}
           aria-label={t("library")}
@@ -170,6 +171,7 @@ export function App({
                   type="button"
                   role="menuitem"
                   aria-disabled={blocked || undefined}
+                  disabled={blocked}
                   title={blocked ? t("emptyDraftHint") : undefined}
                   onClick={() => !blocked && setScene({ kind: "enhance", mode })}
                 >

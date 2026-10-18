@@ -41,6 +41,9 @@ export declare const en: {
     result: string;
     resultMeta: string;
     revise: string;
+    improve: string;
+    unchangedResult: string;
+    regenerateRequest: string;
     regenerate: string;
     copy: string;
     copied: string;
