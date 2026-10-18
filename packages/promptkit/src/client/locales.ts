@@ -109,6 +109,7 @@ export const en = {
   contextEnabled: "Include project context",
   contextWarning:
     "Selected project content is sent to the model. Off by default.",
+  contextItems: "Project content",
   projectInfo: "Project name and branch",
   instructions: "Project instructions",
   directory: "Two-level directory tree",
@@ -245,6 +246,7 @@ export const zh: Record<keyof typeof en, string> = {
   rulesHint: "规则留空时使用内置内容。",
   contextEnabled: "附带项目上下文",
   contextWarning: "勾选的项目内容会发送给模型，默认关闭。",
+  contextItems: "项目内容",
   projectInfo: "项目名与分支",
   instructions: "项目说明",
   directory: "两层目录结构",

@@ -162,22 +162,27 @@ export function Settings({
           }
         />
         <p className="pk-caption">{t("contextWarning")}</p>
-        {(["project", "instructions", "directory", "manifests"] as const).map(
-          (k) => (
-            <Switch
-              key={k}
-              label={t(k === "project" ? "projectInfo" : k)}
-              disabled={!draftSettings.context.enabled}
-              checked={draftSettings.context[k]}
-              onChange={(v) =>
-                setDraftSettings({
-                  ...draftSettings,
-                  context: { ...draftSettings.context, [k]: v },
-                })
-              }
-            />
-          ),
-        )}
+        <details>
+          <summary>{t("contextItems")}</summary>
+          <div className="pk-stack">
+            {(["project", "instructions", "directory", "manifests"] as const).map(
+              (k) => (
+                <Switch
+                  key={k}
+                  label={t(k === "project" ? "projectInfo" : k)}
+                  disabled={!draftSettings.context.enabled}
+                  checked={draftSettings.context[k]}
+                  onChange={(v) =>
+                    setDraftSettings({
+                      ...draftSettings,
+                      context: { ...draftSettings.context, [k]: v },
+                    })
+                  }
+                />
+              ),
+            )}
+          </div>
+        </details>
         <hr className="pk-divider" />
         <Field label={t("connection")}>
           <select

@@ -105,6 +105,7 @@ export declare const en: {
     rulesHint: string;
     contextEnabled: string;
     contextWarning: string;
+    contextItems: string;
     projectInfo: string;
     instructions: string;
     directory: string;

@@ -888,6 +888,7 @@ window.__ModuleLoader__.load({
 			rulesHint: "An empty rule uses the built-in rule.",
 			contextEnabled: "Include project context",
 			contextWarning: "Selected project content is sent to the model. Off by default.",
+			contextItems: "Project content",
 			projectInfo: "Project name and branch",
 			instructions: "Project instructions",
 			directory: "Two-level directory tree",
@@ -1022,6 +1023,7 @@ window.__ModuleLoader__.load({
 			rulesHint: "规则留空时使用内置内容。",
 			contextEnabled: "附带项目上下文",
 			contextWarning: "勾选的项目内容会发送给模型，默认关闭。",
+			contextItems: "项目内容",
 			projectInfo: "项目名与分支",
 			instructions: "项目说明",
 			directory: "两层目录结构",
@@ -2722,23 +2724,26 @@ window.__ModuleLoader__.load({
 						className: "pk-caption",
 						children: t("contextWarning")
 					}),
-					[
-						"project",
-						"instructions",
-						"directory",
-						"manifests"
-					].map((k) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Switch, {
-						label: t(k === "project" ? "projectInfo" : k),
-						disabled: !draftSettings.context.enabled,
-						checked: draftSettings.context[k],
-						onChange: (v) => setDraftSettings({
-							...draftSettings,
-							context: {
-								...draftSettings.context,
-								[k]: v
-							}
-						})
-					}, k)),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("contextItems") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: "pk-stack",
+						children: [
+							"project",
+							"instructions",
+							"directory",
+							"manifests"
+						].map((k) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Switch, {
+							label: t(k === "project" ? "projectInfo" : k),
+							disabled: !draftSettings.context.enabled,
+							checked: draftSettings.context[k],
+							onChange: (v) => setDraftSettings({
+								...draftSettings,
+								context: {
+									...draftSettings.context,
+									[k]: v
+								}
+							})
+						}, k))
+					})] }),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("hr", { className: "pk-divider" }),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Field, {
 						label: t("connection"),
