@@ -18,6 +18,7 @@ import { format, type T } from "./locales.ts";
 import { useDraft, type ComposerInput } from "./useDraft.ts";
 import { draftUnchanged, replacementEdits } from "./draft.ts";
 import { workflow } from "./workflow.ts";
+import { answerValues, deferredAnswer, delegatedAnswer, mergeQuestionnaire } from "./questionnaire.ts";
 import {
   Button,
   CardHeader,
@@ -65,7 +66,8 @@ export function Enhance({
   onWrite: WriteBack;
   onEditFavorite: (id: string) => void;
 }) {
-  const saved = useRef(workflow(api, composer.sessionId || "", mode)).current;
+  const saved = useRef(workflow(api, composer.sessionId || "", `${mode}:${config.settings.detail}:${config.settings.audience}`)).current;
+  const root = useRef<HTMLDivElement>(null);
   const [result, setResult] = useState(saved.result),
     [edited, setEdited] = useState(saved.edited),
     [history, setHistory] = useState(saved.history),
@@ -76,6 +78,8 @@ export function Enhance({
     [supplement, setSupplement] = useState(saved.supplement),
     [busy, setBusy] = useState<string | null>(null),
     [other, setOther] = useState<string | null>(null);
+  const [extra, setExtra] = useState<"option" | "question" | null>(null),
+    [extraText, setExtraText] = useState("");
   const task = useTask(),
     writer = useDraft(api, t, composer, undefined, saved);
   const request = useRef<AbortController | null>(null),
@@ -119,6 +123,15 @@ export function Enhance({
   useEffect(() => {
     if (locked && busy && !restarting.current) cancel();
   }, [locked, busy]);
+  useEffect(() => {
+    if (!selected || busy || locked) return;
+    const card = root.current?.closest<HTMLElement>(".pk-card");
+    const active = document.activeElement;
+    if (card && (!active || active === document.body || active.closest(".pk-tools") && !card.contains(active))) {
+      card.tabIndex = -1;
+      card.focus({ preventScroll: true });
+    }
+  }, [selected, busy, locked]);
   function busyText({ start, forceFinal, addition }: Run) {
     if (mode === "rewrite")
       return t(!start && addition ? "revising" : "rewriting");
@@ -139,7 +152,7 @@ export function Enhance({
         .filter((q) => (Object.hasOwn(current, q.id) ? current[q.id] : "").trim())
         .map((q) => ({ questionId: q.id, answer: current[q.id].trim() }));
       if (!supplementOnly || confirmed.length)
-        rounds = [...rounds, { questions: result.questions, answers: confirmed }];
+        rounds = [{ questions: result.questions, answers: confirmed }];
     }
     const nextMessages =
       start || run.rounds
@@ -179,7 +192,7 @@ export function Enhance({
     restarting.current = start;
     try {
       const guard = start
-        ? await writer.reset(controller.signal, mode === "grill")
+        ? await writer.reset(controller.signal)
         : writer.guard;
       if (!guard || token !== generation.current) return;
       const introText = start ? "" : (run.intro ?? intro);
@@ -195,11 +208,8 @@ export function Enhance({
         setSupplement("");
       }
       const prompt = guard.draft.trim() ? guard.draft : introText;
-      // 输入框为空时「需求对齐」先问「你想做什么？」，不调用模型。
       if (!prompt.trim()) {
-        if (mode === "rewrite") throw new Error(t("emptyDraft"));
-        saved.started = true;
-        return;
+        throw new Error(t("emptyDraft"));
       }
       const output = await api.call<GenerationResult>(
         "generate",
@@ -224,7 +234,8 @@ export function Enhance({
         return;
       saved.started = true;
       setIntro(introText);
-      setResult(output);
+      const queue = output.kind === "questions" ? mergeQuestionnaire(rounds, output.questions) : null;
+      setResult(queue ? { ...output, questions: queue.questions } : output);
       setEdited(output.text ?? "");
       setHistory(rounds);
       setMessages(nextMessages);
@@ -233,8 +244,10 @@ export function Enhance({
         task.setError(t("unchangedResult"));
         setSupplement(addition);
       }
-      setAnswers({});
-      setQuestionIndex(0);
+      setAnswers(queue?.answers ?? {});
+      setQuestionIndex(queue?.index ?? 0);
+      setExtra(null);
+      setExtraText("");
     } catch (error) {
       if (!controller.signal.aborted && token === generation.current)
         task.setError((error as Error).message);
@@ -246,14 +259,30 @@ export function Enhance({
       }
     }
   }
-  /** 选中后自动进入下一题，一轮答完自动提交。 */
-  function pick(answer: string) {
+  /** 单选自动继续，多选在确认后提交；回改旧答案时重新检查后续问题。 */
+  function pick(answer: string, complete = false) {
     if (!selected || !result || locked) return;
-    const next = { ...answers, [selected.id]: answer };
+    let value = answer;
+    const decision = [deferredAnswer, delegatedAnswer].includes(answer);
+    if (selected.multiSelect && !decision && !complete) {
+      const values = answerValues(answerFor(selected.id));
+      value = JSON.stringify(values.includes(answer) ? values.filter(item => item !== answer) : [...values, answer]);
+    }
+    const baseline = history.flatMap(round => round.answers).find(item => item.questionId === selected.id)?.answer;
+    const changed = baseline && baseline !== value;
+    const questions = changed ? result.questions.slice(0, questionIndex + 1) : result.questions;
+    if (changed) {
+      setResult({ ...result, questions });
+      setHistory([]);
+      setMessages([]);
+    }
+    const next = Object.fromEntries(questions.filter(q => q.id === selected.id || answers[q.id]).map(q => [q.id, q.id === selected.id ? value : answers[q.id]]));
     setAnswers(next);
     setOther(null);
-    if (questionIndex < result.questions.length - 1)
+    if (selected.multiSelect && !decision && !complete) return;
+    if (questionIndex < questions.length - 1)
       setQuestionIndex(questionIndex + 1);
+    else if (changed) void generate({ rounds: [{ questions, answers: questions.flatMap(q => next[q.id] ? [{ questionId: q.id, answer: next[q.id] }] : []) }] });
     else void generate({ answers: next });
   }
   function editAnswers() {
@@ -304,11 +333,7 @@ export function Enhance({
     return () => document.removeEventListener("keydown", onKey);
   });
   function customAnswer(question: Question) {
-    const answer = answerFor(question.id);
-    return question.options.some((o) => o.label === answer) ||
-      answer === t("skipAnswer")
-      ? ""
-      : answer;
+    return answerValues(answerFor(question.id)).find(answer => !question.options.some(option => option.label === answer)) || "";
   }
   /** 分页只切换题目；跳过通过独立按钮提交。 */
   function advance() {
@@ -352,10 +377,9 @@ export function Enhance({
               !task.error
             ? "intro"
             : "empty";
-  const round = history.length + 1;
   const meta =
     view === "questions"
-      ? format(t("round"), { n: round })
+      ? format(t("questionCount"), { n: questionIndex + 1, total: result!.questions.length })
       : view === "summary"
         ? t("summaryMeta")
         : view === "final"
@@ -373,24 +397,10 @@ export function Enhance({
       ].join("\n"),
     )
     .join("\n\n");
-  const answered = selected
-    ? [
-        ...history.flatMap((r) =>
-          r.questions.map((q) => ({
-            question: q.question,
-            answer: r.answers.find((a) => a.questionId === q.id)?.answer ?? "",
-          })),
-        ),
-        ...result!.questions.slice(0, questionIndex).map((q) => ({
-          question: q.question,
-          answer: answerFor(q.id),
-        })),
-      ].filter((item) => item.answer)
-    : [];
   const unsafe = !!composer.input && !replacementEdits(composer.input, edited);
   const canWrite = !!composer.inputActions && !!writer.guard;
   return (
-    <div className="pk-workflow">
+    <div ref={root} className="pk-workflow">
       <CardHeader title={title} meta={meta} t={t} onClose={onClose} />
       {locked && (
         <div className="pk-stale" role="status">
@@ -451,8 +461,10 @@ export function Enhance({
                 <RotateCw size={15} aria-hidden />
               </IconButton>
             </div>
+            {selected.basis && <p className="pk-caption pk-basis">{selected.basis}</p>}
+            {selected.multiSelect && <p className="pk-caption">{t("multipleChoices")}</p>}
             <div
-              role="radiogroup"
+              role={selected.multiSelect ? "group" : "radiogroup"}
               aria-label={selected.question}
               className="pk-options"
             >
@@ -460,9 +472,9 @@ export function Enhance({
                 <button
                   key={index}
                   type="button"
-                  role="radio"
+                  role={selected.multiSelect ? "checkbox" : "radio"}
                   className="pk-option"
-                  aria-checked={answerFor(selected.id) === option.label}
+                  aria-checked={answerValues(answerFor(selected.id)).includes(option.label)}
                   disabled={locked}
                   onClick={() => pick(option.label)}
                 >
@@ -513,7 +525,7 @@ export function Enhance({
               ) : (
                 <button
                   type="button"
-                  role="radio"
+                  role={selected.multiSelect ? "checkbox" : "radio"}
                   className="pk-option"
                   aria-checked={!!customAnswer(selected)}
                   disabled={locked}
@@ -528,15 +540,23 @@ export function Enhance({
                 </button>
               )}
             </div>
-            {answered.length > 0 && (
-              <ul className="pk-answered">
-                {answered.map((item, index) => (
-                  <li key={index}>
-                    ✓ {item.question} <span>{item.answer}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className="pk-decisions">
+              <button type="button" className="pk-link" disabled={locked} aria-pressed={answerFor(selected.id) === deferredAnswer} title={t("deferHint")} onClick={() => pick(deferredAnswer)}>{t("defer")}</button>
+              <button type="button" className="pk-link" disabled={locked} aria-pressed={answerFor(selected.id) === delegatedAnswer} title={t("delegateHint")} onClick={() => pick(delegatedAnswer)}>{t("delegate")}</button>
+              {selected.multiSelect && <Button primary disabled={locked || !answerValues(answerFor(selected.id)).length} onClick={() => pick(answerFor(selected.id), true)}>{t("confirmChoices")}</Button>}
+            </div>
+            {extra && <form className="pk-follow-row" onSubmit={event => {
+              event.preventDefault();
+              const value = extraText.trim();
+              if (!value || locked) return;
+              if (extra === "option") {
+                setResult({ ...result!, questions: result!.questions.map(q => q.id === selected.id ? { ...q, options: [...q.options, { label: value, description: "" }] } : q) });
+                setExtra(null); setExtraText("");
+              } else void generate({ supplementOnly: true, addition: `${t("addQuestionRequest")} ${value}` });
+            }}>
+              <input className="pk-input" autoFocus aria-label={t(extra === "option" ? "addOption" : "addQuestion")} placeholder={t(extra === "option" ? "addOption" : "addQuestion")} maxLength={extra === "option" ? 160 : 3000} value={extraText} onChange={event => setExtraText(event.target.value)} />
+              <Button type="submit" disabled={locked || !extraText.trim()}>{t("confirm")}</Button>
+            </form>}
           </>
         )}
         {view === "summary" && (
@@ -616,9 +636,7 @@ export function Enhance({
             >
               <ChevronLeft size={16} aria-hidden />
             </IconButton>
-            <span>
-              {questionIndex + 1} / {result!.questions.length}
-            </span>
+            <span className="pk-dots" role="group" aria-label={t("questions")}>{result!.questions.map((q, index) => <button type="button" key={q.id} className="pk-dot" aria-label={`${index + 1}. ${q.title}`} aria-current={index === questionIndex ? "step" : undefined} data-answered={!!answerFor(q.id)} disabled={locked} onClick={() => { setQuestionIndex(index); setOther(null); setExtra(null); }}>{index + 1}</button>)}</span>
             <IconButton
               label={t("nextQuestion")}
               disabled={locked || questionIndex >= result!.questions.length - 1}
@@ -628,9 +646,14 @@ export function Enhance({
             </IconButton>
           </span>
           <span className="pk-grow" />
-          <Button disabled={locked} onClick={() => pick(t("skipAnswer"))}>
-            {t("skipQuestion")}
-          </Button>
+          <details className="pk-more">
+            <summary>{t("more")}</summary>
+            <div className="pk-more-menu">
+              <Button disabled={locked || selected.options.length >= 6} onClick={event => { event.currentTarget.closest("details")?.removeAttribute("open"); setExtra("option"); setExtraText(""); }}>{t("addOption")}</Button>
+              <Button disabled={locked} onClick={event => { event.currentTarget.closest("details")?.removeAttribute("open"); setExtra("question"); setExtraText(""); }}>{t("addQuestion")}</Button>
+              <Button disabled={locked} onClick={() => generate({ start: true })}>{t("restart")}</Button>
+            </div>
+          </details>
           <Button
             disabled={locked}
             onClick={() => generate({ forceFinal: true })}
@@ -669,6 +692,7 @@ export function Enhance({
       )}
       {view === "final" && (
         <footer className="pk-foot">
+          {mode === "grill" && history.length > 0 && <button type="button" className="pk-link" disabled={locked} onClick={editAnswers}>{t("changeAnswers")}</button>}
           <IconButton
             label={t("regenerate")}
             disabled={locked}

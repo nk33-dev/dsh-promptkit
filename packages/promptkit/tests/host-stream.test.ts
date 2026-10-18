@@ -80,7 +80,7 @@ describe("Harness stream integration", () => {
     expect(result.text).toBe("complete result");
     expect(stream.mock.calls[0][0]).toMatchObject({
       reasoningEffort: "low",
-      maxTokens: 8192,
+      maxTokens: 4096,
     });
     expect(stream.mock.calls[0][0]).not.toHaveProperty("tools");
   });

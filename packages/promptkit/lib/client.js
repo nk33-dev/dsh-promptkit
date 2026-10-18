@@ -883,6 +883,21 @@ window.__ModuleLoader__.load({
 			grillEnabled: "Clarify needs",
 			favoritesEnabled: "Saved prompts",
 			defaultMode: "Listed first",
+			detail: "Enhancement depth",
+			audience: "Audience profile",
+			questionCount: "Question {n} / {total}",
+			questions: "Questions",
+			more: "More",
+			addOption: "Add option",
+			addQuestion: "Add question",
+			addQuestionRequest: "Add a question to clarify this decision:",
+			confirm: "Confirm",
+			multipleChoices: "Choose all that apply",
+			confirmChoices: "Continue",
+			defer: "Decide later",
+			deferHint: "Keep this unresolved",
+			delegate: "You decide",
+			delegateHint: "Let AI choose and explain why",
 			rules: "Rules",
 			rewriteRule: "Enhancement rule",
 			grillRule: "Clarification rule",
@@ -1020,7 +1035,22 @@ window.__ModuleLoader__.load({
 			rewriteEnabled: "增强提示词",
 			grillEnabled: "需求对齐",
 			favoritesEnabled: "常用提示词",
-			defaultMode: "排在前面的模式",
+			defaultMode: "菜单首项",
+			detail: "增强深度",
+			audience: "受众画像",
+			questionCount: "第 {n} / {total} 题",
+			questions: "题目",
+			more: "更多",
+			addOption: "添加选项",
+			addQuestion: "补充问题",
+			addQuestionRequest: "请补充一道问题来确认这个决策：",
+			confirm: "确认",
+			multipleChoices: "可多选",
+			confirmChoices: "选好了",
+			defer: "暂不决定",
+			deferHint: "保留待定，暂不代选",
+			delegate: "你来决定",
+			delegateHint: "由 AI 选择并说明依据",
 			rules: "规则",
 			rewriteRule: "增强规则",
 			grillRule: "对齐规则",
@@ -1107,6 +1137,44 @@ window.__ModuleLoader__.load({
 				entries.set(key, state);
 			}
 			return state;
+		}
+		//#endregion
+		//#region src/client/questionnaire.ts
+		const deferredAnswer = "暂不决定：保留为待定，不替我选择";
+		const delegatedAnswer = "你来决定：根据已确认需求选择，并说明依据";
+		function answerValues(answer = "") {
+			if (!answer || ["暂不决定：保留为待定，不替我选择", "你来决定：根据已确认需求选择，并说明依据"].includes(answer)) return [];
+			try {
+				const values = JSON.parse(answer);
+				if (Array.isArray(values) && values.every((value) => typeof value === "string")) return values;
+			} catch {}
+			return [answer];
+		}
+		function orderedQuestion(question) {
+			const index = question.recommended;
+			if (index === null || index === void 0 || index <= 0 || index >= question.options.length) return question;
+			return {
+				...question,
+				recommended: 0,
+				options: [question.options[index], ...question.options.filter((_, i) => i !== index)]
+			};
+		}
+		function mergeQuestionnaire(rounds, incoming) {
+			const questions = /* @__PURE__ */ new Map();
+			const answers = Object.create(null);
+			for (const round of rounds) {
+				for (const question of round.questions) questions.set(question.id, orderedQuestion(question));
+				for (const answer of round.answers) answers[answer.questionId] = answer.answer;
+			}
+			for (const question of incoming) questions.set(question.id, orderedQuestion(question));
+			const all = [...questions.values()];
+			if (all.length > 128) throw new Error("问题记录过长，请直接生成 / Too many questions; generate now");
+			const first = incoming[0];
+			return {
+				questions: all,
+				answers,
+				index: Math.max(0, all.findIndex((question) => question.id === first?.id))
+			};
 		}
 		//#endregion
 		//#region src/client/ui.tsx
@@ -1326,8 +1394,10 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region src/client/Enhance.tsx
 		function Enhance({ api, t, config, mode, notify, onClose, onWrite, onEditFavorite, ...composer }) {
-			const saved = (0, react.useRef)(workflow(api, composer.sessionId || "", mode)).current;
+			const saved = (0, react.useRef)(workflow(api, composer.sessionId || "", `${mode}:${config.settings.detail}:${config.settings.audience}`)).current;
+			const root = (0, react.useRef)(null);
 			const [result, setResult] = (0, react.useState)(saved.result), [edited, setEdited] = (0, react.useState)(saved.edited), [history, setHistory] = (0, react.useState)(saved.history), [answers, setAnswers] = (0, react.useState)(saved.answers), [questionIndex, setQuestionIndex] = (0, react.useState)(saved.questionIndex), [intro, setIntro] = (0, react.useState)(saved.intro), [messages, setMessages] = (0, react.useState)(saved.messages), [supplement, setSupplement] = (0, react.useState)(saved.supplement), [busy, setBusy] = (0, react.useState)(null), [other, setOther] = (0, react.useState)(null);
+			const [extra, setExtra] = (0, react.useState)(null), [extraText, setExtraText] = (0, react.useState)("");
 			const task = useTask(), writer = useDraft(api, t, composer, void 0, saved);
 			const request = (0, react.useRef)(null), generation = (0, react.useRef)(0), restarting = (0, react.useRef)(false), last = (0, react.useRef)(() => {});
 			const title = t(mode === "grill" ? "grill" : "generate");
@@ -1364,6 +1434,19 @@ window.__ModuleLoader__.load({
 			(0, react.useEffect)(() => {
 				if (locked && busy && !restarting.current) cancel();
 			}, [locked, busy]);
+			(0, react.useEffect)(() => {
+				if (!selected || busy || locked) return;
+				const card = root.current?.closest(".pk-card");
+				const active = document.activeElement;
+				if (card && (!active || active === document.body || active.closest(".pk-tools") && !card.contains(active))) {
+					card.tabIndex = -1;
+					card.focus({ preventScroll: true });
+				}
+			}, [
+				selected,
+				busy,
+				locked
+			]);
 			function busyText({ start, forceFinal, addition }) {
 				if (mode === "rewrite") return t(!start && addition ? "revising" : "rewriting");
 				if (forceFinal) return t(result?.kind === "final" ? "revising" : "writing");
@@ -1381,7 +1464,7 @@ window.__ModuleLoader__.load({
 						questionId: q.id,
 						answer: current[q.id].trim()
 					}));
-					if (!supplementOnly || confirmed.length) rounds = [...rounds, {
+					if (!supplementOnly || confirmed.length) rounds = [{
 						questions: result.questions,
 						answers: confirmed
 					}];
@@ -1413,7 +1496,7 @@ window.__ModuleLoader__.load({
 				setBusy(busyText(run));
 				restarting.current = start;
 				try {
-					const guard = start ? await writer.reset(controller.signal, mode === "grill") : writer.guard;
+					const guard = start ? await writer.reset(controller.signal) : writer.guard;
 					if (!guard || token !== generation.current) return;
 					const introText = start ? "" : run.intro ?? intro;
 					if (start) {
@@ -1428,11 +1511,7 @@ window.__ModuleLoader__.load({
 						setSupplement("");
 					}
 					const prompt = guard.draft.trim() ? guard.draft : introText;
-					if (!prompt.trim()) {
-						if (mode === "rewrite") throw new Error(t("emptyDraft"));
-						saved.started = true;
-						return;
-					}
+					if (!prompt.trim()) throw new Error(t("emptyDraft"));
 					const output = await api.call("generate", {
 						sessionId: guard.sessionId,
 						prompt,
@@ -1450,7 +1529,11 @@ window.__ModuleLoader__.load({
 					if (token !== generation.current || !live.input || !draftUnchanged(guard, live.sessionId, live.input)) return;
 					saved.started = true;
 					setIntro(introText);
-					setResult(output);
+					const queue = output.kind === "questions" ? mergeQuestionnaire(rounds, output.questions) : null;
+					setResult(queue ? {
+						...output,
+						questions: queue.questions
+					} : output);
 					setEdited(output.text ?? "");
 					setHistory(rounds);
 					setMessages(nextMessages);
@@ -1459,8 +1542,10 @@ window.__ModuleLoader__.load({
 						task.setError(t("unchangedResult"));
 						setSupplement(addition);
 					}
-					setAnswers({});
-					setQuestionIndex(0);
+					setAnswers(queue?.answers ?? {});
+					setQuestionIndex(queue?.index ?? 0);
+					setExtra(null);
+					setExtraText("");
 				} catch (error) {
 					if (!controller.signal.aborted && token === generation.current) task.setError(error.message);
 				} finally {
@@ -1471,16 +1556,38 @@ window.__ModuleLoader__.load({
 					}
 				}
 			}
-			/** 选中后自动进入下一题，一轮答完自动提交。 */
-			function pick(answer) {
+			/** 单选自动继续，多选在确认后提交；回改旧答案时重新检查后续问题。 */
+			function pick(answer, complete = false) {
 				if (!selected || !result || locked) return;
-				const next = {
-					...answers,
-					[selected.id]: answer
-				};
+				let value = answer;
+				const decision = [deferredAnswer, delegatedAnswer].includes(answer);
+				if (selected.multiSelect && !decision && !complete) {
+					const values = answerValues(answerFor(selected.id));
+					value = JSON.stringify(values.includes(answer) ? values.filter((item) => item !== answer) : [...values, answer]);
+				}
+				const baseline = history.flatMap((round) => round.answers).find((item) => item.questionId === selected.id)?.answer;
+				const changed = baseline && baseline !== value;
+				const questions = changed ? result.questions.slice(0, questionIndex + 1) : result.questions;
+				if (changed) {
+					setResult({
+						...result,
+						questions
+					});
+					setHistory([]);
+					setMessages([]);
+				}
+				const next = Object.fromEntries(questions.filter((q) => q.id === selected.id || answers[q.id]).map((q) => [q.id, q.id === selected.id ? value : answers[q.id]]));
 				setAnswers(next);
 				setOther(null);
-				if (questionIndex < result.questions.length - 1) setQuestionIndex(questionIndex + 1);
+				if (selected.multiSelect && !decision && !complete) return;
+				if (questionIndex < questions.length - 1) setQuestionIndex(questionIndex + 1);
+				else if (changed) generate({ rounds: [{
+					questions,
+					answers: questions.flatMap((q) => next[q.id] ? [{
+						questionId: q.id,
+						answer: next[q.id]
+					}] : [])
+				}] });
 				else generate({ answers: next });
 			}
 			function editAnswers() {
@@ -1517,8 +1624,7 @@ window.__ModuleLoader__.load({
 				return () => document.removeEventListener("keydown", onKey);
 			});
 			function customAnswer(question) {
-				const answer = answerFor(question.id);
-				return question.options.some((o) => o.label === answer) || answer === t("skipAnswer") ? "" : answer;
+				return answerValues(answerFor(question.id)).find((answer) => !question.options.some((option) => option.label === answer)) || "";
 			}
 			/** 分页只切换题目；跳过通过独立按钮提交。 */
 			function advance() {
@@ -1547,20 +1653,16 @@ window.__ModuleLoader__.load({
 				});
 			}
 			const view = busy ? "busy" : result?.kind === "questions" && selected ? "questions" : result?.kind === "summary" ? "summary" : result?.kind === "final" ? "final" : mode === "grill" && saved.started && !writer.guard?.draft.trim() && !task.error ? "intro" : "empty";
-			const round = history.length + 1;
-			const meta = view === "questions" ? format(t("round"), { n: round }) : view === "summary" ? t("summaryMeta") : view === "final" ? t("resultMeta") : "";
+			const meta = view === "questions" ? format(t("questionCount"), {
+				n: questionIndex + 1,
+				total: result.questions.length
+			}) : view === "summary" ? t("summaryMeta") : view === "final" ? t("resultMeta") : "";
 			const files = result?.context.sections.flatMap((s) => s.files) ?? [];
 			const contextDetail = result?.context.sections.map((s) => [`${s.kind}: ${s.files.join(", ")}`, ...s.skipped.map((reason) => reason.split(" / ")[api.language === "en" ? 1 : 0] || reason)].join("\n")).join("\n\n");
-			const answered = selected ? [...history.flatMap((r) => r.questions.map((q) => ({
-				question: q.question,
-				answer: r.answers.find((a) => a.questionId === q.id)?.answer ?? ""
-			}))), ...result.questions.slice(0, questionIndex).map((q) => ({
-				question: q.question,
-				answer: answerFor(q.id)
-			}))].filter((item) => item.answer) : [];
 			const unsafe = !!composer.input && !replacementEdits(composer.input, edited);
 			const canWrite = !!composer.inputActions && !!writer.guard;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				ref: root,
 				className: "pk-workflow",
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(CardHeader, {
@@ -1625,15 +1727,23 @@ window.__ModuleLoader__.load({
 										})
 									})]
 								}),
+								selected.basis && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+									className: "pk-caption pk-basis",
+									children: selected.basis
+								}),
+								selected.multiSelect && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+									className: "pk-caption",
+									children: t("multipleChoices")
+								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									role: "radiogroup",
+									role: selected.multiSelect ? "group" : "radiogroup",
 									"aria-label": selected.question,
 									className: "pk-options",
 									children: [selected.options.map((option, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 										type: "button",
-										role: "radio",
+										role: selected.multiSelect ? "checkbox" : "radio",
 										className: "pk-option",
-										"aria-checked": answerFor(selected.id) === option.label,
+										"aria-checked": answerValues(answerFor(selected.id)).includes(option.label),
 										disabled: locked,
 										onClick: () => pick(option.label),
 										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -1677,7 +1787,7 @@ window.__ModuleLoader__.load({
 										})]
 									}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 										type: "button",
-										role: "radio",
+										role: selected.multiSelect ? "checkbox" : "radio",
 										className: "pk-option",
 										"aria-checked": !!customAnswer(selected),
 										disabled: locked,
@@ -1689,14 +1799,72 @@ window.__ModuleLoader__.load({
 										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: customAnswer(selected) || t("other") }) })]
 									})]
 								}),
-								answered.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
-									className: "pk-answered",
-									children: answered.map((item, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", { children: [
-										"✓ ",
-										item.question,
-										" ",
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: item.answer })
-									] }, index))
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: "pk-decisions",
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+											type: "button",
+											className: "pk-link",
+											disabled: locked,
+											"aria-pressed": answerFor(selected.id) === "暂不决定：保留为待定，不替我选择",
+											title: t("deferHint"),
+											onClick: () => pick("暂不决定：保留为待定，不替我选择"),
+											children: t("defer")
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+											type: "button",
+											className: "pk-link",
+											disabled: locked,
+											"aria-pressed": answerFor(selected.id) === "你来决定：根据已确认需求选择，并说明依据",
+											title: t("delegateHint"),
+											onClick: () => pick("你来决定：根据已确认需求选择，并说明依据"),
+											children: t("delegate")
+										}),
+										selected.multiSelect && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+											primary: true,
+											disabled: locked || !answerValues(answerFor(selected.id)).length,
+											onClick: () => pick(answerFor(selected.id), true),
+											children: t("confirmChoices")
+										})
+									]
+								}),
+								extra && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("form", {
+									className: "pk-follow-row",
+									onSubmit: (event) => {
+										event.preventDefault();
+										const value = extraText.trim();
+										if (!value || locked) return;
+										if (extra === "option") {
+											setResult({
+												...result,
+												questions: result.questions.map((q) => q.id === selected.id ? {
+													...q,
+													options: [...q.options, {
+														label: value,
+														description: ""
+													}]
+												} : q)
+											});
+											setExtra(null);
+											setExtraText("");
+										} else generate({
+											supplementOnly: true,
+											addition: `${t("addQuestionRequest")} ${value}`
+										});
+									},
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+										className: "pk-input",
+										autoFocus: true,
+										"aria-label": t(extra === "option" ? "addOption" : "addQuestion"),
+										placeholder: t(extra === "option" ? "addOption" : "addQuestion"),
+										maxLength: extra === "option" ? 160 : 3e3,
+										value: extraText,
+										onChange: (event) => setExtraText(event.target.value)
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+										type: "submit",
+										disabled: locked || !extraText.trim(),
+										children: t("confirm")
+									})]
 								})
 							] }),
 							view === "summary" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
@@ -1778,11 +1946,25 @@ window.__ModuleLoader__.load({
 											"aria-hidden": true
 										})
 									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-										questionIndex + 1,
-										" / ",
-										result.questions.length
-									] }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: "pk-dots",
+										role: "group",
+										"aria-label": t("questions"),
+										children: result.questions.map((q, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+											type: "button",
+											className: "pk-dot",
+											"aria-label": `${index + 1}. ${q.title}`,
+											"aria-current": index === questionIndex ? "step" : void 0,
+											"data-answered": !!answerFor(q.id),
+											disabled: locked,
+											onClick: () => {
+												setQuestionIndex(index);
+												setOther(null);
+												setExtra(null);
+											},
+											children: index + 1
+										}, q.id))
+									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconButton, {
 										label: t("nextQuestion"),
 										disabled: locked || questionIndex >= result.questions.length - 1,
@@ -1795,10 +1977,36 @@ window.__ModuleLoader__.load({
 								]
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: "pk-grow" }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-								disabled: locked,
-								onClick: () => pick(t("skipAnswer")),
-								children: t("skipQuestion")
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
+								className: "pk-more",
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("more") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: "pk-more-menu",
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+											disabled: locked || selected.options.length >= 6,
+											onClick: (event) => {
+												event.currentTarget.closest("details")?.removeAttribute("open");
+												setExtra("option");
+												setExtraText("");
+											},
+											children: t("addOption")
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+											disabled: locked,
+											onClick: (event) => {
+												event.currentTarget.closest("details")?.removeAttribute("open");
+												setExtra("question");
+												setExtraText("");
+											},
+											children: t("addQuestion")
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
+											disabled: locked,
+											onClick: () => generate({ start: true }),
+											children: t("restart")
+										})
+									]
+								})]
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
 								disabled: locked,
@@ -1834,6 +2042,13 @@ window.__ModuleLoader__.load({
 					view === "final" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("footer", {
 						className: "pk-foot",
 						children: [
+							mode === "grill" && history.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: "pk-link",
+								disabled: locked,
+								onClick: editAnswers,
+								children: t("changeAnswers")
+							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconButton, {
 								label: t("regenerate"),
 								disabled: locked,
@@ -1884,11 +2099,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/Library.tsx
-		const BUILT_IN = [
-			"all",
-			"project",
-			"global"
-		];
+		const BUILT_IN = ["all", "untagged"];
 		function blank() {
 			return {
 				id: crypto.randomUUID(),
@@ -1902,9 +2113,6 @@ window.__ModuleLoader__.load({
 				lastUsedAt: 0
 			};
 		}
-		function folder(path) {
-			return path.split("/").filter(Boolean).at(-1) || path;
-		}
 		function Library({ api, t, editId, management = false, notify, onClose, onWrite, ...composer }) {
 			const memory = (0, react.useRef)(libraryState(api, composer.sessionId || "", management)).current;
 			const [search, setSearch] = (0, react.useState)(memory.search), [filter, setFilter] = (0, react.useState)(memory.filter), [limit, setLimit] = (0, react.useState)(memory.limit), [editing, setEditing] = (0, react.useState)(editId ? null : memory.editing), [tagText, setTagText] = (0, react.useState)(memory.tagText);
@@ -1912,7 +2120,7 @@ window.__ModuleLoader__.load({
 			const { data, error, reload } = useData(api, "favorites.list", {
 				sessionId: composer.sessionId || "",
 				query: search,
-				scope: builtIn ? filter : "current",
+				scope: builtIn ? filter : "all",
 				tag: builtIn ? "" : filter,
 				sort: "manual",
 				limit
@@ -1946,6 +2154,7 @@ window.__ModuleLoader__.load({
 					await api.call("favorites.save", {
 						favorite: {
 							...editing,
+							project: null,
 							title: editing.title.trim() || t("untitled"),
 							tags: tagText.split(/[,，]/).map((value) => value.trim()).filter(Boolean)
 						},
@@ -2078,18 +2287,6 @@ window.__ModuleLoader__.load({
 									value: tagText,
 									onChange: (e) => setTagText(e.target.value)
 								})]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-								className: "pk-check",
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-									type: "checkbox",
-									checked: !editing.project,
-									disabled: !editing.project && !data?.project,
-									onChange: (e) => setEditing({
-										...editing,
-										project: e.target.checked ? null : editing.project || data?.project || null
-									})
-								}), t("allProjects")]
 							})
 						]
 					}),
@@ -2151,7 +2348,7 @@ window.__ModuleLoader__.load({
 										setFilter(value);
 										setLimit(management ? 200 : 50);
 									},
-									children: value === "all" ? t("all") : value === "project" ? t("thisProject") : value === "global" ? t("global") : value
+									children: value === "all" ? t("all") : value === "untagged" ? t("global") : value
 								}, value))
 							}),
 							importData && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -2257,18 +2454,10 @@ window.__ModuleLoader__.load({
 											onClick: () => canWrite ? void use(item, "append") : void perform(() => edit(item.id)),
 											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 												className: "pk-row-title",
-												children: [
-													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: item.title }),
-													item.tags.map((tag) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: "pk-pill",
-														children: tag
-													}, tag)),
-													item.project && (filter === "all" || management) && item.project.workingDirectory !== data?.project?.workingDirectory && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: "pk-pill",
-														title: item.project.workingDirectory,
-														children: folder(item.project.workingDirectory)
-													})
-												]
+												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: item.title }), item.tags.map((tag) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: "pk-pill",
+													children: tag
+												}, tag))]
 											}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: item.excerpt })]
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
@@ -2654,6 +2843,99 @@ window.__ModuleLoader__.load({
 			return [settings.defaultMode, settings.defaultMode === "rewrite" ? "grill" : "rewrite"].filter((mode) => mode === "rewrite" ? settings.rewriteEnabled : settings.grillEnabled);
 		}
 		//#endregion
+		//#region src/shared/preferences.json
+		var detailLabelsEn = [
+			"Concise",
+			"Standard",
+			"Detailed"
+		];
+		var audienceLabelsEn = [
+			"No technical experience",
+			"P4 · Junior",
+			"P5 · Engineer / Senior specialist",
+			"P6 · Senior engineer",
+			"P7 · Technical expert",
+			"P8 · Senior expert",
+			"P9 · Principal expert",
+			"P10 · Researcher / Senior director"
+		];
+		var details = [
+			{
+				"value": "concise",
+				"label": "简洁",
+				"description": "只整理核心意图，保留实现空间",
+				"rule": "简洁：增强提示词时用短段或少量条目表达目标、关键范围和硬约束，保留用户提供的技术栈；不展开完整方案。需求对齐只问真正阻塞方向的关键问题，其余留给执行者判断；信息充分可直接生成。"
+			},
+			{
+				"value": "standard",
+				"label": "标准",
+				"description": "补齐主要流程和必要选择",
+				"rule": "标准：增强提示词时补齐主要业务流程、必要技术选择和完成条件，形成便于修改的适中提示词。需求对齐优先确认用途、范围、技术约束与交付，再补会改变主要流程的缺口，常规实现细节留给执行者。"
+			},
+			{
+				"value": "detailed",
+				"label": "详细",
+				"description": "形成具体方案，逐项确认重要缺口",
+				"rule": "详细：增强提示词时直接形成具体、完整、易修改的方案。软件任务按需用「目标、技术栈、核心业务、约束」等短标题，给出可用的技术组合、运行形态、角色、业务闭环、数据和规范；对未指定但可合理补齐的规模与业务参数给出明确建议值，集中简短标明可调整，不能伪称用户确认。需求对齐尽可能问清影响方案的业务和技术细节，题数完全取决于输入缺口和任务理解。例如新系统可涉及用途、规模、功能、角色、入口、设备、具体技术栈、业务规则、追溯、规范和已有数据；这些只是考虑维度，按实际适用性提问，不能套用固定问卷。已明确的内容直接沿用，方向清楚即可生成。"
+			}
+		];
+		var audiences = [
+			{
+				"value": "nontechnical",
+				"label": "无技术经验",
+				"description": "用日常语言确认用途和使用流程",
+				"rule": "无技术经验：先问使用者、用途、操作流程和交付形式，用具体场景解释选项；技术选择给出可落地的推荐和维护成本，不要求用户先懂术语。最终提示词仍包含实现所需的技术约束。"
+			},
+			{
+				"value": "p4",
+				"label": "P4 · 初级专员",
+				"description": "已有技术基础，需要明确的实现指导",
+				"rule": "P4 初级专员：有基础技术能力，能在指导下完成明确任务。问题直达业务与技术选择，技术栈选项给出具体组合及适用差异；结果说明必要的实现边界和规范，保持容易逐项修改，不按零基础教学，也不默认引入复杂架构。"
+			},
+			{
+				"value": "p5",
+				"label": "P5 · 工程师 / 资深专员",
+				"description": "能独立完成复杂任务",
+				"rule": "P5 工程师/资深专员：能独立完成复杂任务；聚焦完整业务流程、接口边界、数据模型与验证，明确必要约束，常规编码细节交给执行者。"
+			},
+			{
+				"value": "p6",
+				"label": "P6 · 高级工程师",
+				"description": "能统筹项目并指导他人",
+				"rule": "P6 高级工程师：能统筹项目并指导他人；关注模块边界、协作依赖、一致性、性能和运维取舍，给出可验收的交付边界。"
+			},
+			{
+				"value": "p7",
+				"label": "P7 · 技术专家",
+				"description": "关注架构取舍和业务影响",
+				"rule": "P7 技术专家：聚焦业务目标与架构取舍、系统演进及主要风险，用关键约束和可验证指标表达，减少常规实现指导。"
+			},
+			{
+				"value": "p8",
+				"label": "P8 · 高级专家",
+				"description": "统筹团队方向与部门协作",
+				"rule": "P8 高级专家：关注团队边界、跨系统依赖、演进成本和部门目标，明确关键决策、交付阶段与治理责任，技术深度按任务需要提供。"
+			},
+			{
+				"value": "p9",
+				"label": "P9 · 资深专家",
+				"description": "关注领域规划和业务决策",
+				"rule": "P9 资深专家：从领域规划和业务价值明确目标、约束、主要取舍及衡量方式，避免用实现细节代替决策。"
+			},
+			{
+				"value": "p10",
+				"label": "P10 · 研究员 / 资深总监",
+				"description": "关注战略判断与长期技术方向",
+				"rule": "P10 研究员/资深总监：聚焦战略假设、长期技术方向、投入产出和验证路径；保留关键不确定性，不堆砌战略术语。"
+			}
+		];
+		//#endregion
+		//#region src/shared/preferences.ts
+		const promptDetails = details;
+		const promptAudiences = audiences;
+		const promptDetailLabelsEn = detailLabelsEn;
+		const promptAudienceLabelsEn = audienceLabelsEn;
+		//#endregion
 		//#region src/client/Settings.tsx
 		function Settings({ api, t, onSaved }) {
 			const { data, error, reload } = useData(api, "settings.read", {});
@@ -2721,6 +3003,28 @@ window.__ModuleLoader__.load({
 								children: t("grill")
 							})]
 						})
+					}),
+					["detail", "audience"].map((key) => {
+						const options = key === "detail" ? promptDetails : promptAudiences;
+						const english = key === "detail" ? promptDetailLabelsEn : promptAudienceLabelsEn;
+						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(Field, {
+							label: t(key),
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
+								className: "pk-input",
+								value: draftSettings[key],
+								onChange: (event) => setDraftSettings({
+									...draftSettings,
+									[key]: event.target.value
+								}),
+								children: options.map((item, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: item.value,
+									children: api.language === "en" ? english[index] : item.label
+								}, item.value))
+							}), api.language !== "en" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+								className: "pk-caption",
+								children: options.find((item) => item.value === draftSettings[key])?.description
+							})]
+						}, key);
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("rules") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: "pk-stack",
@@ -3088,7 +3392,7 @@ window.__ModuleLoader__.load({
 .pk-head h2{font-size:14px;font-weight:600;margin:0}
 .pk-meta{color:var(--dsw-alias-label-secondary);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pk-grow{flex:1}
-.pk-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.pk-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:12px 16px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-border-l2) transparent}
 .pk-foot{display:flex;align-items:center;gap:6px;padding:8px 12px;border-top:1px solid var(--dsw-alias-border-l2);flex:none;flex-wrap:wrap}
 .pk-stale{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);flex:none}
 .pk-error-bar{display:flex;align-items:flex-start;gap:10px;padding:8px 16px;color:var(--dsw-alias-state-error-primary);border-top:1px solid var(--dsw-alias-border-l2);white-space:pre-wrap;overflow-wrap:anywhere;flex:none}
@@ -3119,9 +3423,18 @@ window.__ModuleLoader__.load({
 .pk-answered li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pk-answered span{color:var(--dsw-alias-label-primary)}
 .pk-pager{display:inline-flex;align-items:center;gap:2px;color:var(--dsw-alias-label-secondary);font-size:12px}
+.pk-pager{min-width:0;max-width:100%;flex:0 1 auto}.pk-dots{display:flex;gap:4px;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-border-l2) transparent;padding:3px 1px;max-width:440px}
+.pk-dot{font:inherit;font-size:11px;width:23px;height:23px;flex:none;border:1px solid var(--dsw-alias-border-l2);border-radius:50%;background:transparent;color:var(--dsw-alias-label-secondary);padding:0;cursor:pointer}
+.pk-dot[aria-current=step]{border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-label-primary)}
+.pk-dot[data-answered=true]{background:var(--dsw-alias-interactive-bg-hover)}
+.pk-decisions{position:sticky;bottom:0;display:flex;align-items:center;gap:12px;padding:12px 0 4px;background:var(--dsw-alias-bg-base);flex:none}.pk-decisions .pk-link{font-size:12px;color:var(--dsw-alias-label-secondary)}.pk-decisions [aria-pressed=true]{color:var(--dsw-alias-state-business-primary)}
+.pk-basis{line-height:1.7;margin-bottom:2px}.pk-options{gap:8px}.pk-option{padding:12px 10px}.pk-head{padding:14px 18px}.pk-body{padding:18px;gap:16px}.pk-foot{padding:12px 18px}.pk-question{font-size:15px}
+.pk-more{position:relative;font-size:12px}.pk-more summary{list-style:none;border:1px solid var(--dsw-alias-border-l2);padding:5px 10px;border-radius:8px}
+.pk-more-menu{position:fixed;z-index:2;transform:translate(-95px,-135px);padding:5px;display:flex;flex-direction:column;gap:3px;background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l2);border-radius:8px}
+.pk-more-menu .pk-button{border:0;text-align:left}
 .pk-summary{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.75;padding:10px 12px;border-radius:8px;background:var(--dsw-alias-interactive-bg-hover)}
 .pk-body.is-result{overflow:hidden}
-.pk-result{flex:1 1 280px;resize:none;min-height:60px;border:0;background:transparent;padding:2px;line-height:1.75;overflow:auto}
+.pk-result{flex:1 1 280px;resize:none;min-height:60px;border:0;background:transparent;padding:2px;line-height:1.75;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-border-l2) transparent}
 .pk-context{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
 .pk-toast{display:flex;align-items:center;gap:12px;padding:7px 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;white-space:nowrap}
 .pk-card>.pk-toast{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);z-index:1}
@@ -3156,6 +3469,7 @@ window.__ModuleLoader__.load({
 .pk-button[data-primary=true]{background:var(--dsw-alias-button-info-fill);color:var(--dsw-alias-label-primary-bluish);border-color:transparent}
 .pk-input{box-sizing:border-box;width:100%;padding:7px 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit}
 .pk-input:disabled{opacity:.5}
+.pk-input.pk-result{border:0;background:transparent;padding:2px}
 .pk-textarea{resize:vertical;min-height:120px;line-height:1.65}
 .pk-label{display:flex;flex-direction:column;gap:5px}
 .pk-label>span{color:var(--dsw-alias-label-secondary);font-size:12px}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { Api } from "./api.ts";
 import type { T } from "./locales.ts";
+import { promptDetails, promptAudiences, promptDetailLabelsEn, promptAudienceLabelsEn } from "../shared/preferences.ts";
 import { Button, Field, Switch, Status, useTask, useData } from "./ui.tsx";
 import type {
   Settings as SettingsValue,
@@ -111,6 +112,20 @@ export function Settings({
             <option value="grill">{t("grill")}</option>
           </select>
         </Field>
+        {(["detail", "audience"] as const).map(key => {
+          const options = key === "detail" ? promptDetails : promptAudiences;
+          const english = key === "detail"
+            ? promptDetailLabelsEn : promptAudienceLabelsEn;
+          return <Field key={key} label={t(key)}>
+            <select className="pk-input" value={draftSettings[key]}
+              onChange={event => setDraftSettings({ ...draftSettings, [key]: event.target.value })}>
+              {options.map((item, index) => <option key={item.value} value={item.value}>
+                {api.language === "en" ? english[index] : item.label}
+              </option>)}
+            </select>
+            {api.language !== "en" && <p className="pk-caption">{options.find(item => item.value === draftSettings[key])?.description}</p>}
+          </Field>;
+        })}
         <details>
           <summary>{t("rules")}</summary>
           <div className="pk-stack">

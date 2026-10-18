@@ -262,11 +262,11 @@ describe("model protocols and question boundaries", () => {
     ).toHaveLength(1);
     expect(() => parseResult(raw, true)).toThrow("模型仍在追问");
   });
-  it("rejects malformed output and waits for confirmation", () => {
+  it("rejects malformed output and accepts a ready final prompt", () => {
     expect(() => parseResult("plain result", false)).toThrow();
     expect(() => parseResult("{broken", false)).toThrow();
     expect(parseResult('{"kind":"final","text":"ready"}', false).kind).toBe(
-      "summary",
+      "final",
     );
     expect(parseResult('{"kind":"summary","text":"ready"}', false).kind).toBe(
       "summary",
@@ -302,5 +302,10 @@ describe("model protocols and question boundaries", () => {
         ],
       }).success,
     ).toBe(false);
+  });
+  it("ignores extra model annotations while keeping the question contract", () => {
+    const result = parseResult(JSON.stringify({ kind: "questions", note: "参考说明", questions: [{ ...question, basis: "范围影响交付", extra: true, options: [{ label: "核心", extra: "ignored" }, { label: "全部" }] }] }), false);
+    expect(result.questions[0].options[0]).toEqual({ label: "核心", description: "" });
+    expect(result.questions[0]).not.toHaveProperty("extra");
   });
 });

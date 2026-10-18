@@ -7,23 +7,27 @@ export declare const questionSchema: z.ZodObject<{
     id: z.ZodString;
     title: z.ZodString;
     question: z.ZodString;
+    basis: z.ZodOptional<z.ZodString>;
+    multiSelect: z.ZodOptional<z.ZodBoolean>;
     options: z.ZodArray<z.ZodObject<{
         label: z.ZodString;
-        description: z.ZodString;
-    }, z.core.$strict>>;
-    recommended: z.ZodNumber;
-}, z.core.$strict>;
+        description: z.ZodDefault<z.ZodString>;
+    }, z.core.$strip>>;
+    recommended: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+}, z.core.$strip>;
 export declare const roundSchema: z.ZodObject<{
     questions: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         title: z.ZodString;
         question: z.ZodString;
+        basis: z.ZodOptional<z.ZodString>;
+        multiSelect: z.ZodOptional<z.ZodBoolean>;
         options: z.ZodArray<z.ZodObject<{
             label: z.ZodString;
-            description: z.ZodString;
-        }, z.core.$strict>>;
-        recommended: z.ZodNumber;
-    }, z.core.$strict>>;
+            description: z.ZodDefault<z.ZodString>;
+        }, z.core.$strip>>;
+        recommended: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    }, z.core.$strip>>;
     answers: z.ZodArray<z.ZodObject<{
         questionId: z.ZodString;
         answer: z.ZodString;
@@ -39,6 +43,21 @@ export declare const settingsSchema: z.ZodObject<{
         rewrite: "rewrite";
         grill: "grill";
     }>;
+    detail: z.ZodDefault<z.ZodEnum<{
+        concise: "concise";
+        standard: "standard";
+        detailed: "detailed";
+    }>>;
+    audience: z.ZodDefault<z.ZodEnum<{
+        nontechnical: "nontechnical";
+        p4: "p4";
+        p5: "p5";
+        p6: "p6";
+        p7: "p7";
+        p8: "p8";
+        p9: "p9";
+        p10: "p10";
+    }>>;
     systemPrompt: z.ZodString;
     grillSystemPrompt: z.ZodString;
     context: z.ZodObject<{
@@ -117,12 +136,14 @@ export declare const feedbackSchema: z.ZodObject<{
             id: z.ZodString;
             title: z.ZodString;
             question: z.ZodString;
+            basis: z.ZodOptional<z.ZodString>;
+            multiSelect: z.ZodOptional<z.ZodBoolean>;
             options: z.ZodArray<z.ZodObject<{
                 label: z.ZodString;
-                description: z.ZodString;
-            }, z.core.$strict>>;
-            recommended: z.ZodNumber;
-        }, z.core.$strict>>;
+                description: z.ZodDefault<z.ZodString>;
+            }, z.core.$strip>>;
+            recommended: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        }, z.core.$strip>>;
         answers: z.ZodArray<z.ZodObject<{
             questionId: z.ZodString;
             answer: z.ZodString;
@@ -157,12 +178,14 @@ export declare const generationSchema: z.ZodObject<{
             id: z.ZodString;
             title: z.ZodString;
             question: z.ZodString;
+            basis: z.ZodOptional<z.ZodString>;
+            multiSelect: z.ZodOptional<z.ZodBoolean>;
             options: z.ZodArray<z.ZodObject<{
                 label: z.ZodString;
-                description: z.ZodString;
-            }, z.core.$strict>>;
-            recommended: z.ZodNumber;
-        }, z.core.$strict>>;
+                description: z.ZodDefault<z.ZodString>;
+            }, z.core.$strip>>;
+            recommended: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        }, z.core.$strip>>;
         answers: z.ZodArray<z.ZodObject<{
             questionId: z.ZodString;
             answer: z.ZodString;
@@ -188,6 +211,21 @@ export declare const storedSettingsSchema: z.ZodDefault<z.ZodObject<{
         rewrite: "rewrite";
         grill: "grill";
     }>;
+    detail: z.ZodDefault<z.ZodEnum<{
+        concise: "concise";
+        standard: "standard";
+        detailed: "detailed";
+    }>>;
+    audience: z.ZodDefault<z.ZodEnum<{
+        nontechnical: "nontechnical";
+        p4: "p4";
+        p5: "p5";
+        p6: "p6";
+        p7: "p7";
+        p8: "p8";
+        p9: "p9";
+        p10: "p10";
+    }>>;
     systemPrompt: z.ZodString;
     grillSystemPrompt: z.ZodString;
     context: z.ZodObject<{

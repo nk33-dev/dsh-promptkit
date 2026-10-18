@@ -23,7 +23,7 @@ import { captureDraft, replacementEdits } from "./draft.ts";
 import { libraryState } from "./workflow.ts";
 import type { WriteBack } from "./Enhance.tsx";
 
-const BUILT_IN = ["all", "project", "global"] as const;
+const BUILT_IN = ["all", "untagged"] as const;
 function blank(): Favorite {
   return {
     id: crypto.randomUUID(),
@@ -36,9 +36,6 @@ function blank(): Favorite {
     updatedAt: 0,
     lastUsedAt: 0,
   };
-}
-function folder(path: string) {
-  return path.split("/").filter(Boolean).at(-1) || path;
 }
 export function Library({
   api,
@@ -72,7 +69,7 @@ export function Library({
   const { data, error, reload } = useData<FavoriteList>(api, "favorites.list", {
     sessionId: composer.sessionId || "",
     query: search,
-    scope: builtIn ? filter : "current",
+    scope: builtIn ? filter : "all",
     tag: builtIn ? "" : filter,
     sort: "manual",
     limit,
@@ -109,6 +106,7 @@ export function Library({
       await api.call("favorites.save", {
         favorite: {
           ...editing,
+          project: null,
           title: editing.title.trim() || t("untitled"),
           tags: tagText
             .split(/[,，]/)
@@ -250,22 +248,6 @@ export function Library({
               onChange={(e) => setTagText(e.target.value)}
             />
           </label>
-          <label className="pk-check">
-            <input
-              type="checkbox"
-              checked={!editing.project}
-              disabled={!editing.project && !data?.project}
-              onChange={(e) =>
-                setEditing({
-                  ...editing,
-                  project: e.target.checked
-                    ? null
-                    : editing.project || data?.project || null,
-                })
-              }
-            />
-            {t("allProjects")}
-          </label>
         </div>
         <ErrorBar error={task.error} t={t} />
         <footer className="pk-foot">
@@ -318,9 +300,7 @@ export function Library({
             >
               {value === "all"
                 ? t("all")
-                : value === "project"
-                  ? t("thisProject")
-                  : value === "global"
+                : value === "untagged"
                     ? t("global")
                     : value}
             </button>
@@ -444,14 +424,6 @@ export function Library({
                       {tag}
                     </span>
                   ))}
-                  {item.project &&
-                    (filter === "all" || management) &&
-                    item.project.workingDirectory !==
-                      data?.project?.workingDirectory && (
-                      <span className="pk-pill" title={item.project.workingDirectory}>
-                        {folder(item.project.workingDirectory)}
-                      </span>
-                    )}
                 </span>
                 <small>{item.excerpt}</small>
               </button>

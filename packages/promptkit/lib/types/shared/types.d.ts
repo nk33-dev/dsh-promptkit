@@ -26,6 +26,8 @@ export interface Settings {
     presetsEnabled: boolean;
     feedbackEnabled: boolean;
     defaultMode: Mode;
+    detail: "concise" | "standard" | "detailed";
+    audience: "nontechnical" | "p4" | "p5" | "p6" | "p7" | "p8" | "p9" | "p10";
     systemPrompt: string;
     grillSystemPrompt: string;
     context: ContextOptions;
@@ -63,11 +65,13 @@ export interface Question {
     id: string;
     title: string;
     question: string;
+    basis?: string;
+    multiSelect?: boolean;
     options: {
         label: string;
         description: string;
     }[];
-    recommended: number;
+    recommended: number | null;
 }
 export interface Round {
     questions: Question[];

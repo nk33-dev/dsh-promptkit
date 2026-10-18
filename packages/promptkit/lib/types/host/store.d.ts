@@ -18,6 +18,21 @@ declare const spec: {
                     rewrite: "rewrite";
                     grill: "grill";
                 }>;
+                detail: z.ZodDefault<z.ZodEnum<{
+                    concise: "concise";
+                    standard: "standard";
+                    detailed: "detailed";
+                }>>;
+                audience: z.ZodDefault<z.ZodEnum<{
+                    nontechnical: "nontechnical";
+                    p4: "p4";
+                    p5: "p5";
+                    p6: "p6";
+                    p7: "p7";
+                    p8: "p8";
+                    p9: "p9";
+                    p10: "p10";
+                }>>;
                 systemPrompt: z.ZodString;
                 grillSystemPrompt: z.ZodString;
                 context: z.ZodObject<{
@@ -107,6 +122,8 @@ export declare class PromptStore {
             presetsEnabled: boolean;
             feedbackEnabled: boolean;
             defaultMode: "rewrite" | "grill";
+            detail: "concise" | "standard" | "detailed";
+            audience: "nontechnical" | "p4" | "p5" | "p6" | "p7" | "p8" | "p9" | "p10";
             systemPrompt: string;
             grillSystemPrompt: string;
             context: {
@@ -175,6 +192,8 @@ export declare class PromptStore {
         presetsEnabled: boolean;
         feedbackEnabled: boolean;
         defaultMode: "rewrite" | "grill";
+        detail: "concise" | "standard" | "detailed";
+        audience: "nontechnical" | "p4" | "p5" | "p6" | "p7" | "p8" | "p9" | "p10";
         systemPrompt: string;
         grillSystemPrompt: string;
         context: {
@@ -268,7 +287,9 @@ export declare class PromptStore {
                     label: string;
                     description: string;
                 }[];
-                recommended: number;
+                recommended: number | null;
+                basis?: string | undefined;
+                multiSelect?: boolean | undefined;
             }[];
             answers: {
                 questionId: string;

@@ -3,7 +3,7 @@ import { gunzipSync } from "node:zlib";
 import { createHash } from "node:crypto";
 import { verifyClientBundle } from "./verify-client.mjs";
 
-const path = "dist/dsh-promptkit-0.1.3.tgz";
+const path = "dist/dsh-promptkit-0.1.4.tgz";
 const archive = await readFile(path),
   tar = gunzipSync(archive),
   files = new Map();

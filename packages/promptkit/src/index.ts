@@ -293,7 +293,7 @@ export class PromptKitService extends TypertRemoteService {
           .max(1000)
           .parse(p.query ?? ""),
         z
-          .enum(["all", "current", "global", "project"])
+          .enum(["all", "current", "global", "project", "untagged"])
           .parse(p.scope ?? "current"),
         z.enum(["manual", "recent", "updated"]).parse(p.sort ?? "manual"),
         z
@@ -342,22 +342,15 @@ export class PromptKitService extends TypertRemoteService {
         revision(),
       );
     if (action === "favorites.add") {
-      // 「存为常用」直接保存：第一行作标题，范围为当前项目，无法确认项目时存为通用。
+      // 第一行作标题，收藏在所有会话中可用。
       const body = z
         .string()
         .refine((v) => !!v.trim())
         .parse(p.body);
-      const project = await this.project(
-        z
-          .string()
-          .max(256)
-          .parse(p.sessionId ?? ""),
-        signal,
-      );
       return this.store.addFavorite(
         [...(body.trim().split("\n")[0] ?? "")].slice(0, 80).join(""),
         body,
-        project,
+        null,
       );
     }
     if (action === "favorites.restore")

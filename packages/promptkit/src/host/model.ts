@@ -14,6 +14,7 @@ import type {
   Preset,
 } from "../shared/types.ts";
 import { GRILL_FORMAT, REFERENCE_BOUNDARY } from "../shared/defaults.ts";
+import { generationGuidance, questionLimit, outputBudget } from "../shared/preferences.ts";
 import { REWRITE_RULE, GRILL_RULE } from "../rules.ts";
 import { questionSchema } from "../shared/schemas.ts";
 import { z } from "zod";
@@ -23,6 +24,7 @@ type ConversationMessage = { role: "user" | "assistant"; content: string };
 export function parseResult(
   raw: string,
   forceFinal: boolean,
+  limit = 7,
 ): Pick<GenerationResult, "kind" | "text" | "questions"> {
   const clean = raw
     .trim()
@@ -39,9 +41,9 @@ export function parseResult(
   const questions = z
     .object({
       kind: z.literal("questions"),
-      questions: z.array(questionSchema).min(1).max(3),
+      questions: z.array(questionSchema).min(1).max(limit),
     })
-    .strict()
+    .strip()
     .safeParse(parsed);
   if (questions.success) {
     if (forceFinal)
@@ -60,14 +62,14 @@ export function parseResult(
       kind: z.enum(["summary", "final"]),
       text: z.string().trim().min(1).max(40000),
     })
-    .strict()
+    .strip()
     .safeParse(parsed);
   if (!final.success || (forceFinal && final.data.kind !== "final"))
     throw new Error(
       "模型返回的格式不正确，请重试，已填答案会保留 / Invalid model format; retry without losing answers",
     );
   return {
-    kind: forceFinal ? "final" : "summary",
+    kind: final.data.kind,
     text: final.data.text,
     questions: [],
   };
@@ -138,7 +140,7 @@ export async function independentRequest(
             ...(settings.reasoningEffort
               ? { reasoning: { effort: settings.reasoningEffort } }
               : {}),
-            max_output_tokens: 4096,
+            max_output_tokens: outputBudget(settings.detail),
             stream: false,
           }
         : {
@@ -150,7 +152,7 @@ export async function independentRequest(
                 : []),
               ...conversation,
             ],
-            max_tokens: 4096,
+            max_tokens: outputBudget(settings.detail),
             ...(settings.reasoningEffort && protocol !== "anthropic_messages"
               ? { reasoning_effort: settings.reasoningEffort }
               : {}),
@@ -234,6 +236,7 @@ export async function generate(
       ? settings.grillSystemPrompt || GRILL_RULE
       : settings.systemPrompt || REWRITE_RULE,
     preset?.rule,
+    generationGuidance(settings),
     REFERENCE_BOUNDARY,
     request.mode === "grill" ? GRILL_FORMAT : "",
     request.messages?.length || request.currentText
@@ -316,7 +319,7 @@ export async function generate(
               source: { kind: "user" },
             }),
       ),
-      maxTokens: 8192,
+      maxTokens: outputBudget(settings.detail),
       signal,
     })) {
       assembler.push(chunk);
@@ -354,7 +357,7 @@ export async function generate(
   }
   return {
     ...(request.mode === "grill"
-      ? parseResult(output.text, forceFinal)
+      ? parseResult(output.text, forceFinal, questionLimit(settings.detail))
       : { kind: "final" as const, text: output.text.trim(), questions: [] }),
     context,
     metadata: {

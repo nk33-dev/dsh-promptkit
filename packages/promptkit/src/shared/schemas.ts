@@ -11,33 +11,35 @@ export const projectSchema = z
 export const questionSchema = z
   .object({
     id: z.string().min(1).max(80),
-    title: text(100).refine((value) => !!value.trim()),
-    question: text(2000).refine((value) => !!value.trim()),
+    title: text(80).refine((value) => !!value.trim()),
+    question: text(1200).refine((value) => !!value.trim()),
+    basis: text(600).optional(),
+    multiSelect: z.boolean().optional(),
     options: z
       .array(
         z
           .object({
-            label: text(200).refine((value) => !!value.trim()),
-            description: text(1000),
+            label: text(160).refine((value) => !!value.trim()),
+            description: text(600).default(""),
           })
-          .strict(),
+          .strip(),
       )
       .min(2)
-      .max(3),
-    recommended: z.number().int().min(0).max(2),
+      .max(6),
+    recommended: z.number().int().min(0).max(5).nullable().default(null),
   })
-  .strict()
-  .refine((q) => q.recommended < q.options.length);
+  .strip()
+  .refine((q) => q.recommended === null || q.recommended < q.options.length);
 export const roundSchema = z
   .object({
-    questions: z.array(questionSchema).min(1).max(3),
+    questions: z.array(questionSchema).min(1).max(128),
     answers: z
       .array(
         z
           .object({ questionId: z.string().max(80), answer: text(3000) })
           .strict(),
       )
-      .max(3),
+      .max(128),
   })
   .strict()
   .refine(
@@ -54,6 +56,8 @@ export const settingsSchema = z
     presetsEnabled: z.boolean(),
     feedbackEnabled: z.boolean(),
     defaultMode: z.enum(["rewrite", "grill"]),
+    detail: z.enum(["concise", "standard", "detailed"]).default("standard"),
+    audience: z.enum(["nontechnical", "p4", "p5", "p6", "p7", "p8", "p9", "p10"]).default("p4"),
     systemPrompt: text(50000),
     grillSystemPrompt: text(50000),
     context: z

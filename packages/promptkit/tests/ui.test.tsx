@@ -15,6 +15,7 @@ import { App } from "../src/client/App.tsx";
 import { Management } from "../src/client/Management.tsx";
 import { useDraft } from "../src/client/useDraft.ts";
 import { en } from "../src/client/locales.ts";
+import { delegatedAnswer, deferredAnswer } from "../src/client/questionnaire.ts";
 import { defaultSettings, DEFAULT_PRESETS } from "../src/shared/defaults.ts";
 import type { Configuration, GenerationResult } from "../src/shared/types.ts";
 import type {
@@ -267,6 +268,37 @@ describe("entry", () => {
   });
 });
 describe("clarify needs", () => {
+  it("puts the recommendation first and uses matching keyboard numbers", async () => {
+    const { generations } = setup(async () => generations().length === 1 ? { ...questions, questions: [{ ...q, recommended: 1, basis: "Scope changes delivery." }] } : final);
+    await start();
+    await screen.findByText("Scope changes delivery.");
+    expect(screen.getAllByRole("radio")[0].textContent).toContain("Everything");
+    fireEvent.keyDown(document.body, { key: "1" });
+    await screen.findByLabelText(en.result);
+    expect((generations()[1][1] as any).history[0].answers[0].answer).toBe("Everything");
+  });
+  it("collects multiple choices before continuing", async () => {
+    const { generations } = setup(async () => generations().length === 1 ? { ...questions, questions: [{ ...q, multiSelect: true }] } : final);
+    await start();
+    fireEvent.click(await screen.findByRole("checkbox", { name: /Core only/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Everything/ }));
+    expect(generations()).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: en.confirmChoices }));
+    await screen.findByLabelText(en.result);
+    expect(JSON.parse((generations()[1][1] as any).history[0].answers[0].answer)).toEqual(["Core only", "Everything"]);
+  });
+  it("delegates explicitly and keeps prior questions available after follow-up", async () => {
+    const { generations } = setup(async () => generations().length === 1 ? questions : generations().length === 2 ? { ...questions, questions: [{ ...q, id: "rules", title: "Rules", question: "Any borrowing limit?" }] } : final);
+    await start();
+    fireEvent.click(await screen.findByRole("button", { name: en.delegate }));
+    await screen.findByText("Any borrowing limit?");
+    expect((generations()[1][1] as any).history[0].answers[0].answer).toBe(delegatedAnswer);
+    fireEvent.click(screen.getByRole("button", { name: "1. Scope" }));
+    expect(screen.getByRole("button", { name: en.delegate }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: en.direct }));
+    await screen.findByLabelText(en.result);
+    expect((generations()[2][1] as any).forceFinal).toBe(true);
+  });
   it("advances after each choice and submits the round automatically", async () => {
     let count = 0;
     const { generations } = setup(async () =>
@@ -286,7 +318,7 @@ describe("clarify needs", () => {
     );
     fireEvent.click(await option(/Core only/));
     await screen.findByText("Which stack?");
-    expect(screen.getByText(/How much\?/).textContent).toContain("✓");
+    expect(screen.getByRole("button", { name: "1. Scope" }).getAttribute("data-answered")).toBe("true");
     fireEvent.click(await option(/Everything/));
     await screen.findByLabelText(en.result);
     const history = (generations()[1][1] as any).history;
@@ -311,10 +343,10 @@ describe("clarify needs", () => {
     fireEvent.click(screen.getByRole("button", { name: en.nextQuestion }));
     fireEvent.keyDown(document.body, { key: "ArrowRight" });
     expect(generations()).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: en.skipQuestion }));
+    fireEvent.click(screen.getByRole("button", { name: en.defer }));
     await screen.findByLabelText(en.result);
     expect((generations()[1][1] as any).history[0].answers[0].answer).toBe(
-      en.skipAnswer,
+      deferredAnswer,
     );
   });
   it("turns Other into an inline input; Escape collapses and Enter answers", async () => {
@@ -595,7 +627,7 @@ describe("saved prompts", () => {
     );
     expect(
       call.mock.calls.filter((v) => v[0] === "favorites.list").at(-1)![1],
-    ).toMatchObject({ tag: "review", scope: "current", sort: "manual" });
+    ).toMatchObject({ tag: "review", scope: "all", sort: "manual" });
   });
   it("deletes without confirmation and restores on undo", async () => {
     const { call } = setup();

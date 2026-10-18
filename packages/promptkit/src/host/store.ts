@@ -120,7 +120,7 @@ export class PromptStore {
     const visible = library.favorites.filter(
       (f) =>
         scope === "all" ||
-        (scope === "global"
+        (scope === "untagged" ? f.tags.length === 0 : scope === "global"
           ? !f.project
           : scope === "project"
             ? !!f.project && sameProject(f.project, project)
@@ -146,11 +146,10 @@ export class PromptStore {
       revision: library.revision,
       total: entries.length,
       project,
-      // 标签筛选按「通用 + 本项目」取值，切换范围时标签不跟着变。
+      // 标签来自完整收藏库，切换筛选时保持稳定。
       tags: [
         ...new Set(
           library.favorites
-            .filter((f) => !f.project || sameProject(f.project, project))
             .flatMap((f) => f.tags),
         ),
       ],

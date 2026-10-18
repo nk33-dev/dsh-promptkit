@@ -22,9 +22,9 @@ For source installs and development, see [Development](docs/development.md).
 
 ## Features
 
-- **Enhance prompt**: adds scope, implementation steps and acceptance checks. New decisions are labelled as suggestions or assumptions.
-- **Clarify needs**: one question at a time; picking an option advances automatically and the round submits itself. A concise summary waits for confirmation before the final prompt.
-- **Saved prompts**: live search, project and tag filters, drag to reorder. Click a row to append; hover to replace or edit; deletion can be undone.
+- **Enhance prompt**: produces a concrete, editable plan while keeping the requested stack and constraints. Added decisions are labelled as suggestions.
+- **Clarify needs**: asks about missing decisions with short rationale, multiple selection, custom answers, “Decide later” and “You decide.” It generates when the direction is clear and follows up only on ambiguity, conflicts or important gaps.
+- **Saved prompts**: live search, tag filters and drag to reorder across sessions. General means untagged. Click a row to append; hover to replace or edit; deletion can be undone.
 - **Safe write-back**: edit the result, then append or replace. Replacement can be undone; nothing is sent automatically.
 - Optional project context, host or independent model connection, Chinese/English and light/dark themes.
 
@@ -32,7 +32,7 @@ For source installs and development, see [Development](docs/development.md).
 
 Click ✨ beside the composer. With both modes enabled, choose one first; with a single mode it starts immediately.
 
-- In Clarify needs, number keys `1`–`9` select options and `←`/`→` switch questions. **Stop asking and write** is always available.
+- In Clarify needs, numbers select choices; arrows and numbered circles navigate questions. Recommendations appear first. Confirm multiple choices to continue. The next button is disabled on the last question; **Generate now** remains available.
 - Use the follow-up field to refine the result. The action bar offers regenerate, copy, save, append and replace.
 - Click 🔖 for saved prompts. **Save current input** stores the current draft.
 
@@ -43,6 +43,8 @@ If the draft changes while the card is open, the workflow locks and offers to re
 Open **Harness Settings → PromptKit**.
 
 - Entry switches, default mode, model connection and timeout.
+- **Concise / Standard / Detailed** adjust scope and question depth, with a per-request limit of 3 / 7 / 15 questions. The actual count depends on missing information.
+- **Audience profile** ranges from no technical experience through P4–P10. It adjusts explanations and guidance, independently of project scale.
 - Rewrite and question rules; leave blank to use the built-in rules.
 - Project context is off by default. Enable project name, instructions, manifests and directory separately.
 - Import/export uses `{"version":1,"favorites":[...]}`, up to 8 MiB and 5,000 entries.
@@ -50,6 +52,8 @@ Open **Harness Settings → PromptKit**.
 API keys are stored by Harness's credential service; the page only shows whether one is configured.
 
 ## Screenshots
+
+Production components replaying captured model output in a test composer; these are not native Harness window captures.
 
 | Clarify needs | Enhance prompt |
 |:---:|:---:|

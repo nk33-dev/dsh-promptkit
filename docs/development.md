@@ -5,7 +5,7 @@ TypeScript、React 18、Cordis；pnpm、tsdown、Vitest。Host 使用宿主存�
 ## 结构
 
 - `App.tsx`：入口、模式菜单、浮层与状态恢复。
-- `Enhance.tsx`：生成、追问、需求小结和结果操作。
+- `Enhance.tsx`：生成、累计问卷、补问和结果操作；`questionnaire.ts` 处理推荐排序、多选和历史合并。
 - `Library.tsx`：常用提示词的搜索、筛选、排序、编辑和导入导出。
 - `Management.tsx` / `Settings.tsx`：Harness 设置页。
 - `Popover.tsx`：native popover 卡片定位；菜单不抢焦点。
@@ -30,13 +30,15 @@ pnpm pack:plugin
 
 ## 数据与协议
 
-配置、模型、项目、收藏摘要和正文分别按需读取。生成请求保留 `history/forceFinal`，支持 `messages/currentText`；响应为 questions、summary 或 final。未确认的 final 按 summary 处理，结构错误提示重试。历史与补充消息合计最多 120000 字节，不限制轮数。
+配置、模型、项目、收藏摘要和正文分别按需读取。生成请求保留 `history/forceFinal` 和 `messages/currentText`；响应为 questions、summary 或 final，final 直接进入可编辑结果，summary 保留旧协议兼容。历史与补充消息合计最多 120000 字节，累计问卷最多 128 题；每次只发送当前答案快照。结构错误保留状态并提示重试。
+
+`shared/preferences.json` 集中深度、画像、问题上限及输出预算，与 Codex3N 对应资产一致。默认标准 + P4，旧设置缺字段时补齐。简洁/标准/详细每次上限为 3/7/15，输出预算为 2048/4096/8192 tokens；实际题数取决于输入缺口。每次只发送选中的画像与深度规则。新设置继续放在原有设置页面。收藏按完整库和标签展示，`untagged` 表示无标签；项目字段只保留旧数据兼容。
 
 项目上下文预算 14000 字符，文件与目录有独立上限。收藏导入先预览新增与重复数量，整次校验失败时不修改原库。
 
 ## 原生验收
 
-`scripts/native-quick.mjs` 使用真实 Windows Harness 和本地确定性模型服务，需先以 `scripts/restart-harness.ps1 -Executable <Harness 可执行文件>`（或设置 `HARNESS_EXE`）启动调试端口。脚本会暂时切换模型配置并清理测试凭据，运行前应保存个人草稿。`scripts/native-lifecycle.mjs` 覆盖安装、升级、停用与恢复。
+`scripts/native-quick.mjs`、`native-lifecycle.mjs` 保留历史原生验收记录，包含旧界面定位，当前版本不作为验收入口。当前交互以组件测试和真实浏览器手动检查验证；完整 Harness 安装、升级、停用与恢复需另行执行原生回归。历史启动脚本会切换调试端口，不在日常运行中自动执行。
 
 浏览器客户端通过 Harness 模块表加载，不能直接读取插件的 node_modules；`tsdown.client.config.ts` 只把 Lucide 内联，其他外部模块由宿主提供。
 
@@ -48,4 +50,4 @@ pnpm pack:plugin
 
 Harness 继续使用官方输入框槽位、InputActions、消息工厂和 BlockAssembler；独立服务保留三种协议适配。后续修改按 user/assistant 消息发送，currentText 保存用户当前编辑稿。Responses 用 `reasoning.effort`，Chat Completions 用 `reasoning_effort`。空草稿禁用入口，末题禁用下一题，跳过独立；改进支持按钮和回车、输入法保护、错误重试和无变化提示，重新生成保留补充要求。原生 popover 随窗口尺寸与滚动定位。
 
-规则参考 OpenAI 当前模型指南、Anthropic Claude 5 上下文设计，以及宝玉的提示词评估方法和 Simon Willison 的实际执行验证方法。来源和语义回归用例见 Codex3N 文档；不把角色模板、长示例和固定执行步骤塞进每次请求。用户自定义规则保持不变，清空规则字段后使用内置版本。
+规则参考 OpenAI 提示词工程与 Anthropic 上下文工程：以明确目标和实际输出评估，保留充分信息，减少重复限制和固定流程。来源和语义回归用例见 Codex3N 文档；不把全部画像、长示例和固定执行步骤塞进每次请求。用户自定义规则保持不变，清空规则字段后使用内置版本。
