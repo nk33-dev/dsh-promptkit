@@ -40,4 +40,4 @@ pnpm pack:plugin
 
 浏览器客户端通过 Harness 模块表加载，不能直接读取插件的 node_modules；`tsdown.client.config.ts` 只把 Lucide 内联，其他外部模块由宿主提供。
 
-规则与追问流程移植自同一作者的 Codex3N，参考提交 `3d7e6c0dac947d6fb33aca1b84a614a2624dad68`。宿主 SDK 与第三方运行依赖保留各自许可，插件代码采用 MIT。
+规则与追问流程移植自同一作者的 Codex3N，参考提交 `f9ac5a3711022a057d42a03b7afe3d3176379d89`。宿主 SDK 与第三方运行依赖保留各自许可，插件代码采用 MIT。
