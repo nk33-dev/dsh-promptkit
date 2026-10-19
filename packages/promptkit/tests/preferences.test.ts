@@ -33,6 +33,13 @@ describe("generation preferences", () => {
       for (const other of promptAudiences.filter(item => item !== audience)) expect(text).not.toContain(other.rule);
     }
   });
+  it.each(promptDetails)("sends only the $label depth and its calibration examples", detail => {
+    const guidance = generationGuidance({ detail: detail.value as ReturnType<typeof defaultSettings>["detail"], audience: "p4" });
+    expect(guidance).toContain(detail.rule);
+    for (const other of promptDetails.filter(item => item !== detail))
+      expect(guidance).not.toContain(other.rule);
+    expect(guidance.includes("给小团队做任务看板，本地先跑")).toBe(detail.value === "detailed");
+  });
   it("keeps earlier answers across targeted follow-up and sorts recommendations", () => {
     const queue = mergeQuestionnaire([{ questions: [question], answers: [{ questionId: "scope", answer: '["查询","借还"]' }] }], [{ ...question, id: "rules", question: "借阅上限？" }]);
     expect(queue.questions.map(q => q.id)).toEqual(["scope", "rules"]);
