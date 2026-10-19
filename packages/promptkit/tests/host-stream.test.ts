@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import type { Context } from "@deepseek-ai/cordis";
 import type { StreamChunk } from "@deepseek-ai/dsh-llm";
 import { generate } from "../src/host/model.ts";
-import { defaultSettings, DEFAULT_PRESETS } from "../src/shared/defaults.ts";
+import { defaultSettings, DEFAULT_PRESETS, GRILL_FORMAT, REFERENCE_BOUNDARY } from "../src/shared/defaults.ts";
+import { generationGuidance } from "../src/shared/preferences.ts";
+import { REWRITE_RULE, GRILL_RULE } from "../src/rules.ts";
 const request = {
   sessionId: "test",
   prompt: "draft",
@@ -49,7 +51,12 @@ describe("Harness stream integration", () => {
     );
     expect(result.kind).toBe("final");
     expect(result.text).toBe(text);
-    expect(result.metadata.systemPrompt).not.toContain("目标、技术栈、核心业务、约束");
+    expect(result.metadata.systemPrompt).toBe([
+      mode === "grill" ? GRILL_RULE : REWRITE_RULE,
+      generationGuidance({ detail, audience: "p4" }),
+      REFERENCE_BOUNDARY,
+      mode === "grill" ? GRILL_FORMAT : "",
+    ].filter(Boolean).join("\n\n"));
     expect(result.metadata.systemPrompt).toContain("标题来自具体任务");
     expect(JSON.parse(stream.mock.calls[0][0].messages[0].content[0].text).draft).toBe(prompt);
   });
@@ -64,7 +71,7 @@ describe("Harness stream integration", () => {
       { enabled: false, sections: [] }, DEFAULT_PRESETS,
       new AbortController().signal, { provider: "test", model: "model" },
     );
-    expect(stream.mock.calls[0][0].maxTokens).toBe(2048);
+    expect(stream.mock.calls[0][0].maxTokens).toBe(8192);
     expect(result.metadata.systemPrompt).toContain("最多提出 5 题");
     expect(settings.detail).toBe("standard");
   });
@@ -99,6 +106,32 @@ describe("Harness stream integration", () => {
     });
     expect(messages[1].role).toBe("assistant");
   });
+  it("ends a direct final after an earlier clarification with the final instruction", async () => {
+    const { ctx, stream } = context([
+      { type: "block-end", index: 0, block: { type: "text", text: '{"kind":"final","text":"Final"}' } },
+      { type: "finish", reason: { kind: "stop" } },
+    ]);
+    await generate(
+      ctx,
+      defaultSettings(),
+      {
+        ...request,
+        mode: "grill",
+        forceFinal: true,
+        messages: [
+          { role: "assistant", text: '{"kind":"questions","questions":[]}' },
+          { role: "user", text: "这道题没看懂" },
+        ],
+      },
+      { enabled: false, sections: [] },
+      DEFAULT_PRESETS,
+      new AbortController().signal,
+      { provider: "test", model: "model" },
+    );
+    const messages = stream.mock.calls[0][0].messages;
+    expect(messages.at(-2)).toMatchObject({ role: "user", content: [{ type: "text", text: "这道题没看懂" }] });
+    expect(messages.at(-1)).toMatchObject({ role: "user", content: [{ type: "text", text: "根据当前结果和已确认要求生成完整最终提示词。" }] });
+  });
   it("uses the canonical assembler for complete text blocks without deltas", async () => {
     const { ctx, stream } = context([
       {
@@ -120,7 +153,7 @@ describe("Harness stream integration", () => {
     expect(result.text).toBe("complete result");
     expect(stream.mock.calls[0][0]).toMatchObject({
       reasoningEffort: "low",
-      maxTokens: 4096,
+      maxTokens: 12288,
     });
     expect(stream.mock.calls[0][0]).not.toHaveProperty("tools");
   });

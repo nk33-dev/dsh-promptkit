@@ -163,7 +163,8 @@ export function Enhance({
               ? [
                   {
                     role: "assistant" as const,
-                    text: JSON.stringify(selected),
+                    // 与模型的提问格式一致，避免模型照着裸题目对象回复。
+                    text: JSON.stringify({ kind: "questions", questions: [selected] }),
                     round: rounds.length,
                   },
                 ]
@@ -235,11 +236,17 @@ export function Enhance({
         return;
       saved.started = true;
       setIntro(introText);
-      const queue = output.kind === "questions" ? mergeQuestionnaire(rounds, output.questions) : null;
+      // 未作答时重述或补题，当前队列不在 rounds 里，需一并保留，否则其余题会丢失。
+      const kept =
+        result?.kind === "questions"
+          ? [...rounds, { questions: result.questions, answers: [] }]
+          : rounds;
+      const queue = output.kind === "questions" ? mergeQuestionnaire(kept, output.questions) : null;
       setResult(queue ? { ...output, questions: queue.questions } : output);
       setEdited(output.text ?? "");
       setHistory(rounds);
-      setMessages(nextMessages);
+      // 重述、补题请求已由新题落实，留着会让之后的提交又被当成“看不懂”。
+      setMessages(queue ? [] : nextMessages);
       setSupplement("");
       if (addition.trim() && output.text?.trim() === edited.trim()) {
         task.setError(t("unchangedResult"));

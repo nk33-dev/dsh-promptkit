@@ -22,7 +22,7 @@ describe("generation preferences", () => {
     expect(parseResult(JSON.stringify({ kind: "questions", questions }), false, limit).questions).toHaveLength(limit);
     expect(() => parseResult(JSON.stringify({ kind: "questions", questions: [...questions, { ...question, id: "extra" }] }), false, limit)).toThrow();
     expect(generationGuidance({ detail, audience: "p4" })).toContain(`最多提出 ${limit} 题`);
-    expect(outputBudget(detail)).toBe(detail === "concise" ? 2048 : detail === "standard" ? 4096 : 8192);
+    expect(outputBudget(detail)).toBe(detail === "concise" ? 8192 : detail === "standard" ? 12288 : 16384);
   });
   it("uses each selected audience without sending all audience rules", () => {
     for (const audience of promptAudiences) {
@@ -33,12 +33,14 @@ describe("generation preferences", () => {
       for (const other of promptAudiences.filter(item => item !== audience)) expect(text).not.toContain(other.rule);
     }
   });
-  it.each(promptDetails)("sends only the $label depth and its calibration examples", detail => {
+  it.each(promptDetails)("sends only the $label depth without task examples", detail => {
     const guidance = generationGuidance({ detail: detail.value as ReturnType<typeof defaultSettings>["detail"], audience: "p4" });
     expect(guidance).toContain(detail.rule);
     for (const other of promptDetails.filter(item => item !== detail))
       expect(guidance).not.toContain(other.rule);
-    expect(guidance.includes("给小团队做任务看板，本地先跑")).toBe(detail.value === "detailed");
+    expect(guidance).not.toContain("给小团队做任务看板，本地先跑");
+    expect(guidance).not.toContain("图书管理系统");
+    expect(guidance).not.toContain("0.5");
   });
   it("keeps earlier answers across targeted follow-up and sorts recommendations", () => {
     const queue = mergeQuestionnaire([{ questions: [question], answers: [{ questionId: "scope", answer: '["查询","借还"]' }] }], [{ ...question, id: "rules", question: "借阅上限？" }]);

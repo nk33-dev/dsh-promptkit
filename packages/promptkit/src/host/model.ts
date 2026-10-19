@@ -263,9 +263,11 @@ export async function generate(
       content: text,
     })),
   ];
+  // 问答中途直接生成时，最后一条可能是早先的“看不懂”或补充问题，需追加最终稿指令。
   if (
     conversation.at(-1)?.role === "assistant" ||
-    (!request.messages?.length && request.currentText)
+    (!request.messages?.length && request.currentText) ||
+    (forceFinal && !request.currentText && request.messages?.length)
   )
     conversation.push({
       role: "user",

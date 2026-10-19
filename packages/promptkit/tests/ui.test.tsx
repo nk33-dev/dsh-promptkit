@@ -375,6 +375,19 @@ describe("clarify needs", () => {
     await screen.findByLabelText(en.result);
     expect((generations()[2][1] as any).history[0].answers).toEqual([{ questionId: q.id, answer: "Everything" }]);
   });
+  it("keeps unanswered questions when one is rephrased and does not resend the request", async () => {
+    const two = { ...questions, questions: [q, { ...q, id: "stack", title: "Stack", question: "Which stack?" }] };
+    const { generations } = setup(async () => generations().length === 1 ? two
+      : generations().length === 2 ? { ...questions, questions: [{ ...q, question: "Search page or borrowing workflow?" }] } : final);
+    await start();
+    fireEvent.click(await screen.findByRole("button", { name: en.rephrase }));
+    await screen.findByText("Search page or borrowing workflow?");
+    expect(JSON.parse((generations()[1][1] as any).messages[0].text).kind).toBe("questions");
+    expect(screen.getByRole("button", { name: "2. Stack" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: en.direct }));
+    await screen.findByLabelText(en.result);
+    expect((generations()[2][1] as any).messages).toEqual([]);
+  });
   it("delegates explicitly and keeps prior questions available after follow-up", async () => {
     const { generations } = setup(async () => generations().length === 1 ? questions : generations().length === 2 ? { ...questions, questions: [{ ...q, id: "rules", title: "Rules", question: "Any borrowing limit?" }] } : final);
     await start();
