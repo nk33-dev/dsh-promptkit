@@ -1,5 +1,7 @@
 import { connect } from "./cdp.mjs";
 import { writeFile } from "node:fs/promises";
+// 验收时打开的 Harness 项目名，可用 PROMPTKIT_TEST_PROJECT 指定。
+const project = process.env.PROMPTKIT_TEST_PROJECT || "";
 const page = await connect(),
   report = { version: "0.1.3", checks: [], errors: [] };
 const assert = (v, m) => {
@@ -51,7 +53,7 @@ try {
   );
   assert(true, "Enable restores client services");
   await page.evaluate(
-    `(()=>{[...document.querySelectorAll('button')].find(b=>(b.getAttribute('aria-label')||'').startsWith('在')&&(b.getAttribute('aria-label')||'').includes('Codex3N')).click();return true})()`,
+    `(()=>{[...document.querySelectorAll('button')].find(b=>(b.getAttribute('aria-label')||'').startsWith('在')&&(b.getAttribute('aria-label')||'').includes(${JSON.stringify(project)})).click();return true})()`,
   );
   await click(".pk-tools button", "收藏库");
   await wait(

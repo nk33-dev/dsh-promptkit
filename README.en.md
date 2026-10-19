@@ -2,9 +2,7 @@
 
 [中文](README.md) · **English**
 
-Rough draft in, useful prompt out. Ask the missing questions, then keep prompts worth reusing.
-
-A DeepSeek Harness plugin that completes a draft into an actionable prompt, or clarifies the requirements first.
+A DeepSeek Harness plugin that turns a rough draft in the composer into a prompt that is ready to send. When the requirements are still unclear, it asks a few key questions first. Prompts worth keeping can be saved for next time.
 
 ![Composer tools and mode menu](docs/images/composer-menu.png)
 
@@ -18,43 +16,42 @@ github:nk33-dev/dsh-promptkit#path:/packages/promptkit
 
 Enable the plugin and restart Harness. Requires Harness `0.2.1-rc.2`. The repository ships the built output, so Node and pnpm are not required.
 
-For source installs and development, see [Development](docs/development.md).
-
 ## Features
 
-- **Enhance prompt**: completes a draft into a ready-to-send prompt rather than a list of questions. Choices that can be made are written out; facts only you know become fill-in blanks such as 【list page URL】.
-- **Clarify needs**: asks about missing decisions with a recommended choice and rationale for single-choice questions, plus multiple selection, custom answers, “Decide later” and “You decide.” Small facts become blanks instead of extra questions. It generates when the direction is clear and follows up only on ambiguity, conflicts or important gaps.
-- **Saved prompts**: live search, tag filters and drag to reorder across sessions. General means untagged. Click a row to append; hover to replace or edit; deletion can be undone.
-- **Safe write-back**: edit the result, then append or replace. Replacement can be undone; nothing is sent automatically.
-- Optional project context, host or independent model connection, Chinese/English and light/dark themes.
+- **Enhance prompt**: completes a draft into a full prompt. Decisions that can be made are written out; facts only you know become blanks such as 【list page URL】 to fill in before sending.
+- **Clarify needs**: asks about gaps in the draft. Single-choice questions come with a recommendation and rationale; you can also pick several, write your own, decide later or let the AI decide. It generates as soon as the direction is clear.
+- **Saved prompts**: live search, tag filters and drag to reorder. Click to append to the composer; hover to replace or edit; deletion can be undone.
+- **You confirm every write-back**: edit the result, then append or replace. Replacement can be undone, and nothing is sent automatically.
 
 ## Usage
 
-Click ✨ beside the composer. With both modes enabled, choose one first; with a single mode it starts immediately.
+With text in the composer, click ✨. If both modes are enabled, pick one first; with a single mode it starts immediately.
 
-- In Clarify needs, numbers select choices; arrows and numbered circles navigate questions. Recommendations appear first. Multiple choices are recorded immediately. “Decide later” and “You decide” stay pinned below the choices. Once all answers are complete, use the last question's right arrow to review them; **Generate now** remains available. Use the icon beside a question to have it rephrased.
-- **Change answers** on the result returns to the questionnaire; continuing without changes restores the previous result without another model call.
-- Use the follow-up field to refine the result. The action bar offers regenerate, copy, save, append and replace.
-- Click 🔖 for saved prompts. **Save current input** stores the current draft.
+- **Clarify needs**: number keys select choices; `←` / `→` or the numbered dots move between questions, and the recommendation is listed first. Click the icon beside a question to have it rephrased; **Generate now** is always available.
+- **Result**: type a change request below and click **Improve** or press Enter. You can also regenerate, copy, save, append or replace. **Change answers** returns to the questionnaire; continuing without changes restores the previous result without another model call.
+- **Saved prompts**: click 🔖; **Save current input** stores the draft.
 
-If the draft changes while the card is open, the workflow locks and offers to restart with the new text instead of overwriting it.
+If the composer text changes while the card is open, the workflow locks and offers **Start over with new input** instead of overwriting your edits.
 
 ## Settings
 
 Open **Harness Settings → PromptKit**.
 
-- Entry switches, default mode, model connection and timeout.
-- **Polish / Standard / Detailed** are available in the entry menu, with per-request limits of 5 / 10 / 15 questions. Actual counts are usually lower. Polish only rewords, keeping length and content; Standard fills in goals, core content and key choices; Detailed expands a concrete plan when useful.
-- **Audience profile** ranges from no technical experience through P4–P10. It adjusts explanations and guidance, independently of project scale.
-- Rewrite and question rules; leave blank to use the built-in rules.
-- Project context is off by default. Enable project name, instructions, manifests and directory separately.
-- Import/export uses `{"version":1,"favorites":[...]}`, up to 8 MiB and 5,000 entries.
+| Setting | Description |
+| --- | --- |
+| Entries | Switch each of the three entries on or off and choose the first menu item |
+| Depth | Polish only rewords and keeps the draft's length; Standard fills in goals, core content and key choices; Detailed writes out a concrete plan when useful. Switch temporarily from the entry menu |
+| Audience | No technical experience or P4–P10. Changes explanations and depth of decisions, not project scale |
+| Model | Use the Harness model, or configure a separate service, model and timeout |
+| Rules | Custom enhance and question rules; leave blank for the built-in rules |
+| Project context | Off by default; choose project name, instructions, manifests and directory separately |
+| Import / export | `{"version":1,"favorites":[...]}`, up to 8 MiB and 5,000 entries |
 
-API keys are stored by Harness's credential service; the page only shows whether one is configured.
+API keys are stored by the Harness credential service; the settings page only shows whether one is configured.
 
 ## Screenshots
 
-Production components replaying captured model output in a test composer; these are not native Harness window captures.
+Plugin components rendered in a test composer, replaying real model output.
 
 | Clarify needs | Enhance prompt |
 |:---:|:---:|
@@ -62,7 +59,7 @@ Production components replaying captured model output in a test composer; these 
 
 <img src="docs/images/library-dark.png" width="760" alt="Saved prompts">
 
-## Development and validation
+## Development
 
 ```sh
 pnpm install
@@ -71,6 +68,6 @@ pnpm test
 pnpm pack:plugin
 ```
 
-See [Development](docs/development.md) for the module layout and committed build output, and [Validation](docs/validation.md) for automated coverage, real-Harness scope and limitations.
+See [Development](docs/development.md) (Chinese) for the source layout and committed build output, and [Validation](docs/validation.md) (Chinese) for coverage and limitations.
 
 MIT

@@ -2,6 +2,8 @@ import { createServer } from "node:http";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { connect } from "./cdp.mjs";
 import { resolve } from "node:path";
+// 验收时打开的 Harness 项目名，可用 PROMPTKIT_TEST_PROJECT 指定。
+const project = process.env.PROMPTKIT_TEST_PROJECT || "";
 const report = {
   version: "0.1.3",
   kind: "Windows Harness UI with deterministic local model",
@@ -186,7 +188,7 @@ try {
   );
   await closeSettings();
   await page.evaluate(
-    `(()=>{[...document.querySelectorAll('button')].find(b=>(b.getAttribute('aria-label')||'').startsWith('在')&&(b.getAttribute('aria-label')||'').includes('Codex3N')).click();return true})()`,
+    `(()=>{[...document.querySelectorAll('button')].find(b=>(b.getAttribute('aria-label')||'').startsWith('在')&&(b.getAttribute('aria-label')||'').includes(${JSON.stringify(project)})).click();return true})()`,
   );
   await pause(700);
   await draft("为团队编写一个任务管理工具。");

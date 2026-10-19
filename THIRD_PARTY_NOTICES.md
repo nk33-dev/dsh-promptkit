@@ -2,7 +2,7 @@
 
 PromptKit 原创代码按 MIT 发布，Copyright (c) 2026 nk33-dev。
 
-内置 `rewrite.md` 与 `grill.md` 来自 nk33-dev 在 Codex3N 中原创的提示词增强规则。本插件由同一作者采用 MIT 授权。参考提交：`dd48ebfbab12aeaea7350e6f925aba74dbe6e208`，功能提交 `cd15a37c`、规则提交 `bd444e63` 等。
+内置 `rewrite.md` 与 `grill.md` 为 nk33-dev 原创的提示词规则，随本插件以 MIT 授权。
 
 本插件调用下列现成能力，第三方组件保留各自许可：
 
