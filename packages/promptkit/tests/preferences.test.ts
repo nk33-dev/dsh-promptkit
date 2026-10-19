@@ -17,6 +17,7 @@ describe("generation preferences", () => {
   });
   it.each(["concise", "standard", "detailed"] as const)("enforces the %s question budget independently of saved history", detail => {
     const limit = questionLimit(detail);
+    expect(limit).toBe(detail === "concise" ? 5 : detail === "standard" ? 10 : 15);
     const questions = Array.from({ length: limit }, (_, index) => ({ ...question, id: String(index) }));
     expect(parseResult(JSON.stringify({ kind: "questions", questions }), false, limit).questions).toHaveLength(limit);
     expect(() => parseResult(JSON.stringify({ kind: "questions", questions: [...questions, { ...question, id: "extra" }] }), false, limit)).toThrow();
@@ -36,5 +37,10 @@ describe("generation preferences", () => {
     expect(queue.index).toBe(1);
     expect(queue.questions[0].options[0].label).toBe("借还");
     expect(answerValues(queue.answers.scope)).toEqual(["查询", "借还"]);
+  });
+  it("clears the returned question's old answer while retaining the other decisions", () => {
+    const queue = mergeQuestionnaire([{ questions: [question, { ...question, id: "stack" }], answers: [{ questionId: "scope", answer: "看不懂" }, { questionId: "stack", answer: "Java" }] }], [{ ...question, question: "先只查询还是包含借还？" }]);
+    expect(queue.answers.scope).toBeUndefined();
+    expect(queue.answers.stack).toBe("Java");
   });
 });

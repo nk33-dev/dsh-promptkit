@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Bookmark, Sparkles } from "lucide-react";
+import { Bookmark, Sparkles, ListChecks } from "lucide-react";
+import { promptDetails, promptDetailLabelsEn } from "../shared/preferences.ts";
 import type { Configuration, Mode } from "../shared/types.ts";
 import type { Api } from "./api.ts";
 import type { T } from "./locales.ts";
@@ -22,7 +23,9 @@ export function App({
 }: ComposerInput & { api: Api; t: T }) {
   api.language = t("settings") === "设置" ? "zh" : "en";
   // 配置在挂载时预取并随设置变化刷新，点击图标时不再等待。
-  const [config, setConfig] = useState<Configuration | null>(null);
+  const [config, setConfig] = useState<Configuration | null>(() => api.configuration ?? null);
+  const [detailOverride, setDetailOverride] = useState<Configuration["settings"]["detail"] | null>(null);
+  const detail = detailOverride ?? config?.settings.detail ?? "standard";
   const [scene, setScene] = useState<Scene | null>(null);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [error, setError] = useState("");
@@ -166,6 +169,16 @@ export function App({
           menu
         >
           <div className="pk-mode-menu" onKeyDown={navigateTabs}>
+            <div className="pk-depth-row">
+              <span>{t("detail")}</span>
+              <div className="pk-depth" role="group" aria-label={t("detail")}>
+                {promptDetails.map((item, index) => <button key={item.value} type="button" aria-pressed={detail === item.value}
+                  title={api.language === "en" ? promptDetailLabelsEn[index] : item.description}
+                  onClick={() => setDetailOverride(item.value as Configuration["settings"]["detail"])}>
+                  {api.language === "en" ? promptDetailLabelsEn[index] : item.label}
+                </button>)}
+              </div>
+            </div>
             {modes.map((mode) => {
               const blocked = emptyDraft;
               return (
@@ -178,12 +191,8 @@ export function App({
                   title={blocked ? t("emptyDraftHint") : undefined}
                   onClick={() => !blocked && setScene({ kind: "enhance", mode })}
                 >
-                  {t(mode === "grill" ? "grill" : "generate")}
-                  <small>
-                    {blocked
-                      ? t("emptyDraftHint")
-                      : t(mode === "grill" ? "grillHint" : "generateHint")}
-                  </small>
+                  {mode === "grill" ? <ListChecks size={16} aria-hidden /> : <Sparkles size={16} aria-hidden />}
+                  <span>{t(mode === "grill" ? "grill" : "generate")}</span>
                 </button>
               );
             })}
@@ -208,10 +217,10 @@ export function App({
           >
             {scene.kind === "enhance" ? (
               <Enhance
-                key={`${composer.sessionId}:${scene.mode}:${config.settings.detail}:${config.settings.audience}`}
+                key={`${composer.sessionId}:${scene.mode}:${detail}:${config.settings.audience}`}
                 api={api}
                 t={t}
-                config={config}
+                config={{ ...config, settings: { ...config.settings, detail } }}
                 mode={scene.mode}
                 notify={notify}
                 onClose={close}

@@ -269,7 +269,6 @@ export function Library({
       {!management && (
         <CardHeader
           title={t("library")}
-          meta={canWrite ? t("clickToAppend") : undefined}
           t={t}
           onClose={onClose}
         />
@@ -342,19 +341,6 @@ export function Library({
                 ? t("noMatch")
                 : t("emptyLibrary")}
             </p>
-            {search || filter !== "all" ? (
-              <Button
-                onClick={() => {
-                  setSearch("");
-                  setFilter("all");
-                }}
-              >
-                {t("clearFilter")}
-              </Button>
-            ) : (
-              !management &&
-              hasDraft && <Button onClick={saveDraft}>{t("saveDraft")}</Button>
-            )}
           </div>
         )}
         <ul className="pk-list" aria-label={t("library")}>

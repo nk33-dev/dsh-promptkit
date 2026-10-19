@@ -32,7 +32,7 @@ For source installs and development, see [Development](docs/development.md).
 
 Click ✨ beside the composer. With both modes enabled, choose one first; with a single mode it starts immediately.
 
-- In Clarify needs, numbers select choices; arrows and numbered circles navigate questions. Recommendations appear first. Confirm multiple choices to continue. The next button is disabled on the last question; **Generate now** remains available.
+- In Clarify needs, numbers select choices; arrows and numbered circles navigate questions. Recommendations appear first. Multiple choices are recorded immediately. Once all answers are complete, use the last question's right arrow to review them; **Generate now** remains available.
 - Use the follow-up field to refine the result. The action bar offers regenerate, copy, save, append and replace.
 - Click 🔖 for saved prompts. **Save current input** stores the current draft.
 
@@ -43,7 +43,7 @@ If the draft changes while the card is open, the workflow locks and offers to re
 Open **Harness Settings → PromptKit**.
 
 - Entry switches, default mode, model connection and timeout.
-- **Concise / Standard / Detailed** adjust scope and question depth, with a per-request limit of 3 / 7 / 15 questions. The actual count depends on missing information.
+- **Polish / Standard / Detailed** are available in the entry menu, with per-request limits of 5 / 10 / 15 questions. Actual counts are usually lower. Polish improves wording and terminology while retaining intent and scope; Standard organizes core requirements; Detailed expands a concrete plan when useful.
 - **Audience profile** ranges from no technical experience through P4–P10. It adjusts explanations and guidance, independently of project scale.
 - Rewrite and question rules; leave blank to use the built-in rules.
 - Project context is off by default. Enable project name, instructions, manifests and directory separately.

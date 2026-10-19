@@ -13,12 +13,21 @@ export const css = `
 .pk-flyout:not(:popover-open){display:none}
 .pk-flyout::backdrop{background:transparent;pointer-events:none}
 .pk-panel{box-sizing:border-box;display:flex;flex-direction:column;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l2);border-radius:12px;font-size:13px;line-height:1.55;overflow:hidden}
-.pk-menu{min-width:220px;max-width:min(300px,calc(100vw - 16px));padding:4px}
+.pk-menu{width:280px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;padding:4px}
 .pk-mode-menu{display:flex;flex-direction:column;gap:2px}
 .pk-mode-menu button{font:inherit;color:inherit;text-align:left;border:0;background:transparent;border-radius:8px;padding:7px 10px;cursor:pointer}
 .pk-mode-menu button:hover{background:var(--dsw-alias-interactive-bg-hover)}
 .pk-mode-menu button[aria-disabled=true]{opacity:.5;cursor:default;background:transparent}
+.pk-mode-menu [role=menuitem]{display:flex;align-items:center;gap:10px;padding:10px 12px}
 .pk-mode-menu small{display:block;color:var(--dsw-alias-label-secondary);font-size:12px}
+.pk-mode-menu .pk-depth-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 5px 10px;margin-bottom:4px;border-bottom:1px solid var(--dsw-alias-border-l2);font-size:12px;color:var(--dsw-alias-label-secondary)}
+.pk-depth{display:flex;gap:2px;padding:2px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px}
+.pk-mode-menu .pk-depth button{padding:4px 9px;font-size:12px;text-align:center;color:var(--dsw-alias-label-secondary)}
+.pk-mode-menu .pk-depth button[aria-pressed=true]{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}
+.pk-flyout:focus{outline:none}
+.pk-flyout button:focus{outline:none;box-shadow:none}
+.pk-flyout[data-keyboard=true] button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:1px}
+.pk-mode-menu button:focus:not(:focus-visible),.pk-tool:focus:not(:focus-visible),.pk-option:focus:not(:focus-visible){outline:none;box-shadow:none}
 .pk-card>.pk-workflow,.pk-card>.pk-library{flex:1;min-height:0;display:flex;flex-direction:column}
 .pk-head{display:flex;align-items:center;gap:8px;padding:10px 10px 8px 16px;border-bottom:1px solid var(--dsw-alias-border-l2);flex:none}
 .pk-head h2{font-size:14px;font-weight:600;margin:0}
@@ -90,7 +99,7 @@ export const css = `
 .pk-row-actions{display:none;align-items:center;gap:1px;padding-top:5px;flex:none}
 .pk-row-item:hover .pk-row-actions,.pk-row-item:focus-within .pk-row-actions{display:flex}
 .pk-row-actions .pk-icon{width:26px;height:26px}
-.pk-empty{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--dsw-alias-label-secondary);padding:24px 0;text-align:center}
+.pk-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--dsw-alias-label-secondary);padding:30px 12px;min-height:100px;text-align:center}
 .pk-empty p{margin:0}
 .pk-edit{gap:12px}
 .pk-check{display:flex;align-items:center;gap:6px}

@@ -181,6 +181,11 @@ const generationSchema = z.object({
 	sessionId: z.string().min(1).max(256),
 	prompt: text(2e4).refine((v) => !!v.trim(), "输入框为空 / Draft is empty"),
 	mode: z.enum(["rewrite", "grill"]),
+	detail: z.enum([
+		"concise",
+		"standard",
+		"detailed"
+	]).optional(),
 	scenario: z.string().max(64),
 	history: z.array(roundSchema),
 	forceFinal: z.boolean(),
@@ -658,8 +663,8 @@ async function collectContext(cwd, options, signal) {
 //#endregion
 //#region src/shared/preferences.json
 var questionLimits = {
-	"concise": 3,
-	"standard": 7,
+	"concise": 5,
+	"standard": 10,
 	"detailed": 15
 };
 var outputBudgets = {
@@ -670,21 +675,21 @@ var outputBudgets = {
 var details = [
 	{
 		"value": "concise",
-		"label": "简洁",
-		"description": "只整理核心意图，保留实现空间",
-		"rule": "简洁：增强提示词时用短段或少量条目表达目标、关键范围和硬约束，保留用户提供的技术栈；不展开完整方案。需求对齐只问真正阻塞方向的关键问题，其余留给执行者判断；信息充分可直接生成。"
+		"label": "微调",
+		"description": "专业化表达，保持原意与范围",
+		"rule": "微调：增强提示词理顺表达、消除重复、明确指代，并将已有的业余表述转成准确专业的要求，例如「按角色设置权限」可表述为「采用 RBAC 管理角色权限」。专业化必须与原意等价，不能借术语扩充功能、引入实现方案或改变目标；缺少的业务、规模、技术栈和规则保持开放，不猜测或补需求。篇幅由原始信息决定，不以缩短字数为目标。需求对齐只补决定目标的核心缺口：做什么、核心业务、规模、开发语言或已有技术、使用入口和设备覆盖；将相关决策合理组织成少量易答的问题，已有答案直接沿用。明确后生成专业、准确且便于修改的提示词。"
 	},
 	{
 		"value": "standard",
 		"label": "标准",
-		"description": "补齐主要流程和必要选择",
-		"rule": "标准：增强提示词时补齐主要业务流程、必要技术选择和完成条件，形成便于修改的适中提示词。需求对齐优先确认用途、范围、技术约束与交付，再补会改变主要流程的缺口，常规实现细节留给执行者。"
+		"description": "理清目标、范围与核心流程",
+		"rule": "标准：在保持原意的基础上，增强提示词将目标、范围、核心流程和约束组织得清楚、具体，必要时给出少量可调整建议；已有项目沿用技术约定，避免擅定规模、收费和无关功能。需求对齐先补核心缺口，再确认影响主要流程、数据和交付的重要选择，常规实现细节交给执行者。结果比微调更完整，保持便于修改。"
 	},
 	{
 		"value": "detailed",
 		"label": "详细",
-		"description": "形成具体方案，逐项确认重要缺口",
-		"rule": "详细：增强提示词时直接形成具体、完整、易修改的方案。软件任务按需用「目标、技术栈、核心业务、约束」等短标题，给出可用的技术组合、运行形态、角色、业务闭环、数据和规范；对未指定但可合理补齐的规模与业务参数给出明确建议值，集中简短标明可调整，不能伪称用户确认。需求对齐尽可能问清影响方案的业务和技术细节，题数完全取决于输入缺口和任务理解。例如新系统可涉及用途、规模、功能、角色、入口、设备、具体技术栈、业务规则、追溯、规范和已有数据；这些只是考虑维度，按实际适用性提问，不能套用固定问卷。已明确的内容直接沿用，方向清楚即可生成。"
+		"description": "展开业务与技术要点，形成具体方案",
+		"rule": "详细：增强提示词直接形成具体、完整、易修改的方案。软件任务按需用「目标、技术栈、核心业务、约束」等短标题，给出一套具体技术组合、运行形态、角色、业务闭环与关键规范；补出的规模或业务参数集中简短标为可调整建议。保持任务相称的篇幅，数据字段、页面清单和实现教程只在用户需要时展开。需求对齐尽可能问清影响方案的重要业务和技术细节，题数完全取决于输入缺口和任务理解；用途、规模、功能、角色、入口、设备、技术栈、业务规则、追溯、已有数据等只按实际需要提问。一般任务少量问题即可，大型复杂任务才接近上限。"
 	}
 ];
 var audiences = [
@@ -742,7 +747,7 @@ var audiences = [
 const promptDetails = details;
 const promptAudiences = audiences;
 function questionLimit(detail) {
-	return questionLimits[detail] ?? 7;
+	return questionLimits[detail] ?? 10;
 }
 function outputBudget(detail) {
 	return outputBudgets[detail] ?? 4096;
@@ -760,7 +765,7 @@ const REWRITE_RULE = readFileSync(new URL("../rules/rewrite.md", import.meta.url
 const GRILL_RULE = readFileSync(new URL("../rules/grill.md", import.meta.url), "utf8").trim();
 //#endregion
 //#region src/host/model.ts
-function parseResult(raw, forceFinal, limit = 7) {
+function parseResult(raw, forceFinal, limit = questionLimit("standard")) {
 	const clean = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
 	let parsed;
 	try {
@@ -879,6 +884,10 @@ async function independentRequest(settings, key, system, user, signal, send = fe
 	throw new Error("没有可用的模型协议 / No compatible protocol");
 }
 async function generate(ctx, settings, request, context, presets, signal, selection) {
+	settings = {
+		...settings,
+		detail: request.detail ?? settings.detail
+	};
 	if (!(request.mode === "grill" ? settings.grillEnabled : settings.rewriteEnabled)) throw new Error("此模式已关闭 / Mode is disabled");
 	const preset = settings.presetsEnabled ? presets.find((p) => p.id === request.scenario) : void 0;
 	const forceFinal = request.forceFinal;

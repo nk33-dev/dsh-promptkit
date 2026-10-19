@@ -78,6 +78,7 @@ window.__ModuleLoader__.load({
 		//#region src/client/api.ts
 		var Api = class {
 			namespace;
+			configuration = null;
 			language = "zh";
 			message(text) {
 				const parts = text.split(" / ");
@@ -100,6 +101,7 @@ window.__ModuleLoader__.load({
 					}, signal ? AbortSignal.any([signal, controller.signal]) : controller.signal);
 					if (!response.ok) throw new Error(this.message(response.error.message || "宿主连接失败，请重试 / Host connection failed; retry"));
 					if (!response.value.ok) throw new Error(this.message(response.value.error));
+					if (action === "config.read") this.configuration = response.value.data;
 					if (action === "settings.save" || action === "presets.save") for (const listener of this.configurationListeners) listener();
 					return response.value.data;
 				} finally {
@@ -365,7 +367,7 @@ window.__ModuleLoader__.load({
 		* This source code is licensed under the ISC license.
 		* See the LICENSE file in the root directory of this source tree.
 		*/
-		const __iconData$10 = {
+		const __iconData$11 = {
 			name: "arrow-left-right",
 			size: 24,
 			node: [
@@ -387,8 +389,8 @@ window.__ModuleLoader__.load({
 				}]
 			]
 		};
-		__iconData$10.node;
-		const ArrowLeftRight = createLucideIcon(__iconData$10);
+		__iconData$11.node;
+		const ArrowLeftRight = createLucideIcon(__iconData$11);
 		//#endregion
 		//#region ../../node_modules/.pnpm/lucide-react@1.58.0_@types+react@18.3.31_react@18.3.1/node_modules/lucide-react/dist/esm/icons/bookmark.mjs
 		/**
@@ -397,7 +399,7 @@ window.__ModuleLoader__.load({
 		* This source code is licensed under the ISC license.
 		* See the LICENSE file in the root directory of this source tree.
 		*/
-		const __iconData$9 = {
+		const __iconData$10 = {
 			name: "bookmark",
 			size: 24,
 			node: [["path", {
@@ -405,8 +407,8 @@ window.__ModuleLoader__.load({
 				key: "oz39mx"
 			}]]
 		};
-		__iconData$9.node;
-		const Bookmark = createLucideIcon(__iconData$9);
+		__iconData$10.node;
+		const Bookmark = createLucideIcon(__iconData$10);
 		//#endregion
 		//#region ../../node_modules/.pnpm/lucide-react@1.58.0_@types+react@18.3.31_react@18.3.1/node_modules/lucide-react/dist/esm/icons/chevron-left.mjs
 		/**
@@ -415,7 +417,7 @@ window.__ModuleLoader__.load({
 		* This source code is licensed under the ISC license.
 		* See the LICENSE file in the root directory of this source tree.
 		*/
-		const __iconData$8 = {
+		const __iconData$9 = {
 			name: "chevron-left",
 			size: 24,
 			node: [["path", {
@@ -423,8 +425,8 @@ window.__ModuleLoader__.load({
 				key: "1wnfg3"
 			}]]
 		};
-		__iconData$8.node;
-		const ChevronLeft = createLucideIcon(__iconData$8);
+		__iconData$9.node;
+		const ChevronLeft = createLucideIcon(__iconData$9);
 		//#endregion
 		//#region ../../node_modules/.pnpm/lucide-react@1.58.0_@types+react@18.3.31_react@18.3.1/node_modules/lucide-react/dist/esm/icons/chevron-right.mjs
 		/**
@@ -433,7 +435,7 @@ window.__ModuleLoader__.load({
 		* This source code is licensed under the ISC license.
 		* See the LICENSE file in the root directory of this source tree.
 		*/
-		const __iconData$7 = {
+		const __iconData$8 = {
 			name: "chevron-right",
 			size: 24,
 			node: [["path", {
@@ -441,8 +443,8 @@ window.__ModuleLoader__.load({
 				key: "mthhwq"
 			}]]
 		};
-		__iconData$7.node;
-		const ChevronRight = createLucideIcon(__iconData$7);
+		__iconData$8.node;
+		const ChevronRight = createLucideIcon(__iconData$8);
 		//#endregion
 		//#region ../../node_modules/.pnpm/lucide-react@1.58.0_@types+react@18.3.31_react@18.3.1/node_modules/lucide-react/dist/esm/icons/copy.mjs
 		/**
@@ -451,7 +453,7 @@ window.__ModuleLoader__.load({
 		* This source code is licensed under the ISC license.
 		* See the LICENSE file in the root directory of this source tree.
 		*/
-		const __iconData$6 = {
+		const __iconData$7 = {
 			name: "copy",
 			size: 24,
 			node: [["rect", {
@@ -467,8 +469,8 @@ window.__ModuleLoader__.load({
 				key: "zix9uf"
 			}]]
 		};
-		__iconData$6.node;
-		const Copy = createLucideIcon(__iconData$6);
+		__iconData$7.node;
+		const Copy = createLucideIcon(__iconData$7);
 		//#endregion
 		//#region ../../node_modules/.pnpm/lucide-react@1.58.0_@types+react@18.3.31_react@18.3.1/node_modules/lucide-react/dist/esm/icons/grip-vertical.mjs
 		/**
@@ -477,7 +479,7 @@ window.__ModuleLoader__.load({
 		* This source code is licensed under the ISC license.
 		* See the LICENSE file in the root directory of this source tree.
 		*/
-		const __iconData$5 = {
+		const __iconData$6 = {
 			name: "grip-vertical",
 			size: 24,
 			node: [
@@ -519,8 +521,44 @@ window.__ModuleLoader__.load({
 				}]
 			]
 		};
+		__iconData$6.node;
+		const GripVertical = createLucideIcon(__iconData$6);
+		//#endregion
+		//#region ../../node_modules/.pnpm/lucide-react@1.58.0_@types+react@18.3.31_react@18.3.1/node_modules/lucide-react/dist/esm/icons/list-checks.mjs
+		/**
+		* @license lucide-react v1.58.0 - ISC
+		*
+		* This source code is licensed under the ISC license.
+		* See the LICENSE file in the root directory of this source tree.
+		*/
+		const __iconData$5 = {
+			name: "list-checks",
+			size: 24,
+			node: [
+				["path", {
+					d: "M13 5h8",
+					key: "a7qcls"
+				}],
+				["path", {
+					d: "M13 12h8",
+					key: "h98zly"
+				}],
+				["path", {
+					d: "M13 19h8",
+					key: "c3s6r1"
+				}],
+				["path", {
+					d: "m3 17 2 2 4-4",
+					key: "1jhpwq"
+				}],
+				["path", {
+					d: "m3 7 2 2 4-4",
+					key: "1obspn"
+				}]
+			]
+		};
 		__iconData$5.node;
-		const GripVertical = createLucideIcon(__iconData$5);
+		const ListChecks = createLucideIcon(__iconData$5);
 		//#endregion
 		//#region ../../node_modules/.pnpm/lucide-react@1.58.0_@types+react@18.3.31_react@18.3.1/node_modules/lucide-react/dist/esm/icons/pencil.mjs
 		/**
@@ -656,6 +694,99 @@ window.__ModuleLoader__.load({
 		};
 		__iconData.node;
 		const X = createLucideIcon(__iconData);
+		//#endregion
+		//#region src/shared/preferences.json
+		var detailLabelsEn = [
+			"Polish",
+			"Standard",
+			"Detailed"
+		];
+		var audienceLabelsEn = [
+			"No technical experience",
+			"P4 · Junior",
+			"P5 · Engineer / Senior specialist",
+			"P6 · Senior engineer",
+			"P7 · Technical expert",
+			"P8 · Senior expert",
+			"P9 · Principal expert",
+			"P10 · Researcher / Senior director"
+		];
+		var details = [
+			{
+				"value": "concise",
+				"label": "微调",
+				"description": "专业化表达，保持原意与范围",
+				"rule": "微调：增强提示词理顺表达、消除重复、明确指代，并将已有的业余表述转成准确专业的要求，例如「按角色设置权限」可表述为「采用 RBAC 管理角色权限」。专业化必须与原意等价，不能借术语扩充功能、引入实现方案或改变目标；缺少的业务、规模、技术栈和规则保持开放，不猜测或补需求。篇幅由原始信息决定，不以缩短字数为目标。需求对齐只补决定目标的核心缺口：做什么、核心业务、规模、开发语言或已有技术、使用入口和设备覆盖；将相关决策合理组织成少量易答的问题，已有答案直接沿用。明确后生成专业、准确且便于修改的提示词。"
+			},
+			{
+				"value": "standard",
+				"label": "标准",
+				"description": "理清目标、范围与核心流程",
+				"rule": "标准：在保持原意的基础上，增强提示词将目标、范围、核心流程和约束组织得清楚、具体，必要时给出少量可调整建议；已有项目沿用技术约定，避免擅定规模、收费和无关功能。需求对齐先补核心缺口，再确认影响主要流程、数据和交付的重要选择，常规实现细节交给执行者。结果比微调更完整，保持便于修改。"
+			},
+			{
+				"value": "detailed",
+				"label": "详细",
+				"description": "展开业务与技术要点，形成具体方案",
+				"rule": "详细：增强提示词直接形成具体、完整、易修改的方案。软件任务按需用「目标、技术栈、核心业务、约束」等短标题，给出一套具体技术组合、运行形态、角色、业务闭环与关键规范；补出的规模或业务参数集中简短标为可调整建议。保持任务相称的篇幅，数据字段、页面清单和实现教程只在用户需要时展开。需求对齐尽可能问清影响方案的重要业务和技术细节，题数完全取决于输入缺口和任务理解；用途、规模、功能、角色、入口、设备、技术栈、业务规则、追溯、已有数据等只按实际需要提问。一般任务少量问题即可，大型复杂任务才接近上限。"
+			}
+		];
+		var audiences = [
+			{
+				"value": "nontechnical",
+				"label": "无技术经验",
+				"description": "用日常语言确认用途和使用流程",
+				"rule": "无技术经验：先问使用者、用途、操作流程和交付形式，用具体场景解释选项；技术选择给出可落地的推荐和维护成本，不要求用户先懂术语。最终提示词仍包含实现所需的技术约束。"
+			},
+			{
+				"value": "p4",
+				"label": "P4 · 初级专员",
+				"description": "已有技术基础，需要明确的实现指导",
+				"rule": "P4 初级专员：有基础技术能力，能在指导下完成明确任务。问题直达业务与技术选择，技术栈选项给出具体组合及适用差异；结果说明必要的实现边界和规范，保持容易逐项修改，不按零基础教学，也不默认引入复杂架构。"
+			},
+			{
+				"value": "p5",
+				"label": "P5 · 工程师 / 资深专员",
+				"description": "能独立完成复杂任务",
+				"rule": "P5 工程师/资深专员：能独立完成复杂任务；聚焦完整业务流程、接口边界、数据模型与验证，明确必要约束，常规编码细节交给执行者。"
+			},
+			{
+				"value": "p6",
+				"label": "P6 · 高级工程师",
+				"description": "能统筹项目并指导他人",
+				"rule": "P6 高级工程师：能统筹项目并指导他人；关注模块边界、协作依赖、一致性、性能和运维取舍，给出可验收的交付边界。"
+			},
+			{
+				"value": "p7",
+				"label": "P7 · 技术专家",
+				"description": "关注架构取舍和业务影响",
+				"rule": "P7 技术专家：聚焦业务目标与架构取舍、系统演进及主要风险，用关键约束和可验证指标表达，减少常规实现指导。"
+			},
+			{
+				"value": "p8",
+				"label": "P8 · 高级专家",
+				"description": "统筹团队方向与部门协作",
+				"rule": "P8 高级专家：关注团队边界、跨系统依赖、演进成本和部门目标，明确关键决策、交付阶段与治理责任，技术深度按任务需要提供。"
+			},
+			{
+				"value": "p9",
+				"label": "P9 · 资深专家",
+				"description": "关注领域规划和业务决策",
+				"rule": "P9 资深专家：从领域规划和业务价值明确目标、约束、主要取舍及衡量方式，避免用实现细节代替决策。"
+			},
+			{
+				"value": "p10",
+				"label": "P10 · 研究员 / 资深总监",
+				"description": "关注战略判断与长期技术方向",
+				"rule": "P10 研究员/资深总监：聚焦战略假设、长期技术方向、投入产出和验证路径；保留关键不确定性，不堆砌战略术语。"
+			}
+		];
+		//#endregion
+		//#region src/shared/preferences.ts
+		const promptDetails = details;
+		const promptAudiences = audiences;
+		const promptDetailLabelsEn = detailLabelsEn;
+		const promptAudienceLabelsEn = audienceLabelsEn;
 		//#endregion
 		//#region src/client/draft.ts
 		function captureDraft(sessionId, input) {
@@ -850,14 +981,12 @@ window.__ModuleLoader__.load({
 			all: "All",
 			thisProject: "This project",
 			global: "General",
-			clickToAppend: "Click one to append it to the input",
 			dragHint: "Drag ⠿ to reorder",
 			drag: "Drag to reorder",
 			saveDraft: "Save current input",
 			newPrompt: "New prompt",
 			emptyLibrary: "No saved prompts yet",
 			noMatch: "No matching prompts",
-			clearFilter: "Clear filters",
 			showMore: "Show more",
 			editPrompt: "Edit prompt",
 			title: "Title",
@@ -893,7 +1022,7 @@ window.__ModuleLoader__.load({
 			addQuestionRequest: "Add a question to clarify this decision:",
 			confirm: "Confirm",
 			multipleChoices: "Choose all that apply",
-			confirmChoices: "Continue",
+			continueAnswers: "Review answers",
 			defer: "Decide later",
 			deferHint: "Keep this unresolved",
 			delegate: "You decide",
@@ -1003,14 +1132,12 @@ window.__ModuleLoader__.load({
 			all: "全部",
 			thisProject: "本项目",
 			global: "通用",
-			clickToAppend: "点一条追加到输入框",
 			dragHint: "拖动 ⠿ 调整顺序",
 			drag: "拖动排序",
 			saveDraft: "存当前输入",
 			newPrompt: "新建",
 			emptyLibrary: "还没有常用提示词",
 			noMatch: "没有找到提示词",
-			clearFilter: "清除筛选",
 			showMore: "显示更多",
 			editPrompt: "编辑提示词",
 			title: "标题",
@@ -1046,7 +1173,7 @@ window.__ModuleLoader__.load({
 			addQuestionRequest: "请补充一道问题来确认这个决策：",
 			confirm: "确认",
 			multipleChoices: "可多选",
-			confirmChoices: "选好了",
+			continueAnswers: "继续检查回答",
 			defer: "暂不决定",
 			deferHint: "保留待定，暂不代选",
 			delegate: "你来决定",
@@ -1166,7 +1293,10 @@ window.__ModuleLoader__.load({
 				for (const question of round.questions) questions.set(question.id, orderedQuestion(question));
 				for (const answer of round.answers) answers[answer.questionId] = answer.answer;
 			}
-			for (const question of incoming) questions.set(question.id, orderedQuestion(question));
+			for (const question of incoming) {
+				questions.set(question.id, orderedQuestion(question));
+				delete answers[question.id];
+			}
 			const all = [...questions.values()];
 			if (all.length > 128) throw new Error("问题记录过长，请直接生成 / Too many questions; generate now");
 			const first = incoming[0];
@@ -1435,7 +1565,7 @@ window.__ModuleLoader__.load({
 				if (locked && busy && !restarting.current) cancel();
 			}, [locked, busy]);
 			(0, react.useEffect)(() => {
-				if (!selected || busy || locked) return;
+				if (!selected && !result?.text || busy || locked) return;
 				const card = root.current?.closest(".pk-card");
 				const active = document.activeElement;
 				if (card && (!active || active === document.body || active.closest(".pk-tools") && !card.contains(active))) {
@@ -1444,6 +1574,7 @@ window.__ModuleLoader__.load({
 				}
 			}, [
 				selected,
+				result?.kind,
 				busy,
 				locked
 			]);
@@ -1516,6 +1647,7 @@ window.__ModuleLoader__.load({
 						sessionId: guard.sessionId,
 						prompt,
 						mode,
+						detail: config.settings.detail,
 						scenario: "general",
 						history: rounds,
 						forceFinal,
@@ -1556,39 +1688,30 @@ window.__ModuleLoader__.load({
 					}
 				}
 			}
-			/** 单选自动继续，多选在确认后提交；回改旧答案时重新检查后续问题。 */
-			function pick(answer, complete = false) {
+			/** 多选即时记录，翻页继续；所有题答完后交给模型检查。 */
+			function pick(answer) {
 				if (!selected || !result || locked) return;
 				let value = answer;
 				const decision = [deferredAnswer, delegatedAnswer].includes(answer);
-				if (selected.multiSelect && !decision && !complete) {
+				if (selected.multiSelect && !decision) {
 					const values = answerValues(answerFor(selected.id));
-					value = JSON.stringify(values.includes(answer) ? values.filter((item) => item !== answer) : [...values, answer]);
+					const next = values.includes(answer) ? values.filter((item) => item !== answer) : [...values, answer];
+					value = next.length ? JSON.stringify(next) : "";
 				}
-				const baseline = history.flatMap((round) => round.answers).find((item) => item.questionId === selected.id)?.answer;
-				const changed = baseline && baseline !== value;
-				const questions = changed ? result.questions.slice(0, questionIndex + 1) : result.questions;
-				if (changed) {
-					setResult({
-						...result,
-						questions
-					});
-					setHistory([]);
-					setMessages([]);
-				}
-				const next = Object.fromEntries(questions.filter((q) => q.id === selected.id || answers[q.id]).map((q) => [q.id, q.id === selected.id ? value : answers[q.id]]));
+				const questions = result.questions;
+				const next = {
+					...answers,
+					[selected.id]: value
+				};
 				setAnswers(next);
 				setOther(null);
-				if (selected.multiSelect && !decision && !complete) return;
+				if (selected.multiSelect && !decision) return;
 				if (questionIndex < questions.length - 1) setQuestionIndex(questionIndex + 1);
-				else if (changed) generate({ rounds: [{
-					questions,
-					answers: questions.flatMap((q) => next[q.id] ? [{
-						questionId: q.id,
-						answer: next[q.id]
-					}] : [])
-				}] });
-				else generate({ answers: next });
+				else {
+					const missing = questions.findIndex((q) => !next[q.id]?.trim());
+					if (missing >= 0) setQuestionIndex(missing);
+					else generate({ answers: next });
+				}
 			}
 			function editAnswers() {
 				const index = history.length - 1, round = history[index];
@@ -1615,7 +1738,7 @@ window.__ModuleLoader__.load({
 					const n = Number(event.key);
 					if (n >= 1 && n <= question.options.length) pick(question.options[n - 1].label);
 					else if (n === question.options.length + 1) setOther(customAnswer(question));
-					else if (event.key === "ArrowRight" && questionIndex < result.questions.length - 1) advance();
+					else if (event.key === "ArrowRight" && (questionIndex < result.questions.length - 1 || canSubmitAnswers)) advance();
 					else if (event.key === "ArrowLeft" && questionIndex > 0) setQuestionIndex(questionIndex - 1);
 					else return;
 					event.preventDefault();
@@ -1626,9 +1749,14 @@ window.__ModuleLoader__.load({
 			function customAnswer(question) {
 				return answerValues(answerFor(question.id)).find((answer) => !question.options.some((option) => option.label === answer)) || "";
 			}
-			/** 分页只切换题目；跳过通过独立按钮提交。 */
+			const canSubmitAnswers = result?.kind === "questions" && result.questions.length > 0 && result.questions.every((q) => answerFor(q.id).trim());
+			/** 完整问卷在末题通过箭头提交检查。 */
 			function advance() {
-				if (!selected || !result || questionIndex >= result.questions.length - 1) return;
+				if (!selected || !result) return;
+				if (questionIndex >= result.questions.length - 1) {
+					if (canSubmitAnswers) generate();
+					return;
+				}
 				setQuestionIndex(questionIndex + 1);
 				setOther(null);
 			}
@@ -1801,32 +1929,23 @@ window.__ModuleLoader__.load({
 								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 									className: "pk-decisions",
-									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-											type: "button",
-											className: "pk-link",
-											disabled: locked,
-											"aria-pressed": answerFor(selected.id) === "暂不决定：保留为待定，不替我选择",
-											title: t("deferHint"),
-											onClick: () => pick("暂不决定：保留为待定，不替我选择"),
-											children: t("defer")
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-											type: "button",
-											className: "pk-link",
-											disabled: locked,
-											"aria-pressed": answerFor(selected.id) === "你来决定：根据已确认需求选择，并说明依据",
-											title: t("delegateHint"),
-											onClick: () => pick("你来决定：根据已确认需求选择，并说明依据"),
-											children: t("delegate")
-										}),
-										selected.multiSelect && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-											primary: true,
-											disabled: locked || !answerValues(answerFor(selected.id)).length,
-											onClick: () => pick(answerFor(selected.id), true),
-											children: t("confirmChoices")
-										})
-									]
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										type: "button",
+										className: "pk-link",
+										disabled: locked,
+										"aria-pressed": answerFor(selected.id) === "暂不决定：保留为待定，不替我选择",
+										title: t("deferHint"),
+										onClick: () => pick("暂不决定：保留为待定，不替我选择"),
+										children: t("defer")
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										type: "button",
+										className: "pk-link",
+										disabled: locked,
+										"aria-pressed": answerFor(selected.id) === "你来决定：根据已确认需求选择，并说明依据",
+										title: t("delegateHint"),
+										onClick: () => pick("你来决定：根据已确认需求选择，并说明依据"),
+										children: t("delegate")
+									})]
 								}),
 								extra && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("form", {
 									className: "pk-follow-row",
@@ -1966,8 +2085,8 @@ window.__ModuleLoader__.load({
 										}, q.id))
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconButton, {
-										label: t("nextQuestion"),
-										disabled: locked || questionIndex >= result.questions.length - 1,
+										label: t(questionIndex === result.questions.length - 1 && canSubmitAnswers ? "continueAnswers" : "nextQuestion"),
+										disabled: locked || questionIndex >= result.questions.length - 1 && !canSubmitAnswers,
 										onClick: advance,
 										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChevronRight, {
 											size: 16,
@@ -2318,7 +2437,6 @@ window.__ModuleLoader__.load({
 				children: [
 					!management && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CardHeader, {
 						title: t("library"),
-						meta: canWrite ? t("clickToAppend") : void 0,
 						t,
 						onClose
 					}),
@@ -2387,18 +2505,9 @@ window.__ModuleLoader__.load({
 								]
 							}),
 							!data && !error && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Loading, { text: t("loading") }),
-							data && !items.length && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							data && !items.length && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 								className: "pk-empty",
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: data.total || search || filter !== "all" ? t("noMatch") : t("emptyLibrary") }), search || filter !== "all" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-									onClick: () => {
-										setSearch("");
-										setFilter("all");
-									},
-									children: t("clearFilter")
-								}) : !management && hasDraft && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Button, {
-									onClick: saveDraft,
-									children: t("saveDraft")
-								})]
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: data.total || search || filter !== "all" ? t("noMatch") : t("emptyLibrary") })
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
 								className: "pk-list",
@@ -2574,7 +2683,7 @@ window.__ModuleLoader__.load({
 		/**
 		* 原生 popover="auto"：Esc 和点击外部由浏览器关闭。
 		* 菜单贴着图标弹出；卡片浮在输入框上方，与输入框同宽。
-		* 鼠标打开时不抢焦点，避免出现焦点环；键盘打开时聚焦第一个控件。
+		* 鼠标打开时聚焦容器，键盘打开时聚焦第一个控件。
 		*/
 		function Popover({ anchor, label, onClose, children, menu = false, focusFirst = false }) {
 			const panel = (0, react.useRef)(null), close = (0, react.useRef)(onClose);
@@ -2586,7 +2695,8 @@ window.__ModuleLoader__.load({
 					if (menu) {
 						const rect = anchor.getBoundingClientRect(), bounds = element.getBoundingClientRect();
 						element.style.left = `${Math.max(8, Math.min(rect.right - bounds.width, innerWidth - bounds.width - 8))}px`;
-						element.style.top = `${rect.top - bounds.height - 8 >= 8 ? rect.top - bounds.height - 8 : rect.bottom + 8}px`;
+						const above = rect.top - bounds.height - 8;
+						element.style.top = `${Math.max(8, Math.min(above >= 8 ? above : rect.bottom + 8, innerHeight - bounds.height - 8))}px`;
 						return;
 					}
 					const box = composer.getBoundingClientRect(), width = Math.max(0, Math.min(box.width, innerWidth - 16)), room = box.top - 16;
@@ -2615,6 +2725,7 @@ window.__ModuleLoader__.load({
 				window.addEventListener("resize", position);
 				window.addEventListener("scroll", position, true);
 				if (focusFirst) element.querySelector("[role=menuitem],.pk-body input,.pk-body textarea,.pk-body button,.pk-foot button")?.focus();
+				else element.focus({ preventScroll: true });
 				return () => {
 					element.removeEventListener("toggle", toggle);
 					observer.disconnect();
@@ -2627,8 +2738,16 @@ window.__ModuleLoader__.load({
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				ref: panel,
 				className: `pk-panel pk-flyout${menu ? " pk-menu" : " pk-card"}`,
+				tabIndex: -1,
 				role: menu ? "menu" : "dialog",
 				"aria-label": label,
+				"data-keyboard": focusFirst || void 0,
+				onKeyDownCapture: (event) => {
+					event.currentTarget.dataset.keyboard = "true";
+				},
+				onPointerDownCapture: (event) => {
+					event.currentTarget.dataset.keyboard = "false";
+				},
 				children
 			});
 		}
@@ -2657,7 +2776,9 @@ window.__ModuleLoader__.load({
 		//#region src/client/App.tsx
 		function App({ api, t, ...composer }) {
 			api.language = t("settings") === "设置" ? "zh" : "en";
-			const [config, setConfig] = (0, react.useState)(null);
+			const [config, setConfig] = (0, react.useState)(() => api.configuration ?? null);
+			const [detailOverride, setDetailOverride] = (0, react.useState)(null);
+			const detail = detailOverride ?? config?.settings.detail ?? "standard";
 			const [scene, setScene] = (0, react.useState)(null);
 			const [anchor, setAnchor] = (0, react.useState)(null);
 			const [error, setError] = (0, react.useState)("");
@@ -2781,10 +2902,24 @@ window.__ModuleLoader__.load({
 						onClose: close,
 						focusFirst,
 						menu: true,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: "pk-mode-menu",
 							onKeyDown: navigateTabs,
-							children: modes.map((mode) => {
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: "pk-depth-row",
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("detail") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: "pk-depth",
+									role: "group",
+									"aria-label": t("detail"),
+									children: promptDetails.map((item, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										type: "button",
+										"aria-pressed": detail === item.value,
+										title: api.language === "en" ? promptDetailLabelsEn[index] : item.description,
+										onClick: () => setDetailOverride(item.value),
+										children: api.language === "en" ? promptDetailLabelsEn[index] : item.label
+									}, item.value))
+								})]
+							}), modes.map((mode) => {
 								const blocked = emptyDraft;
 								return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 									type: "button",
@@ -2796,9 +2931,15 @@ window.__ModuleLoader__.load({
 										kind: "enhance",
 										mode
 									}),
-									children: [t(mode === "grill" ? "grill" : "generate"), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: blocked ? t("emptyDraftHint") : t(mode === "grill" ? "grillHint" : "generateHint") })]
+									children: [mode === "grill" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ListChecks, {
+										size: 16,
+										"aria-hidden": true
+									}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Sparkles, {
+										size: 16,
+										"aria-hidden": true
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t(mode === "grill" ? "grill" : "generate") })]
 								}, mode);
-							})
+							})]
 						})
 					}, "menu"),
 					(scene?.kind === "enhance" || scene?.kind === "library") && anchor && config && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(Popover, {
@@ -2809,7 +2950,13 @@ window.__ModuleLoader__.load({
 						children: [scene.kind === "enhance" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Enhance, {
 							api,
 							t,
-							config,
+							config: {
+								...config,
+								settings: {
+									...config.settings,
+									detail
+								}
+							},
 							mode: scene.mode,
 							notify,
 							onClose: close,
@@ -2819,7 +2966,7 @@ window.__ModuleLoader__.load({
 								editId: id
 							}),
 							...composer
-						}, `${composer.sessionId}:${scene.mode}:${config.settings.detail}:${config.settings.audience}`) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Library, {
+						}, `${composer.sessionId}:${scene.mode}:${detail}:${config.settings.audience}`) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Library, {
 							api,
 							t,
 							editId: scene.editId,
@@ -2845,99 +2992,6 @@ window.__ModuleLoader__.load({
 		function enabledModes({ settings }) {
 			return [settings.defaultMode, settings.defaultMode === "rewrite" ? "grill" : "rewrite"].filter((mode) => mode === "rewrite" ? settings.rewriteEnabled : settings.grillEnabled);
 		}
-		//#endregion
-		//#region src/shared/preferences.json
-		var detailLabelsEn = [
-			"Concise",
-			"Standard",
-			"Detailed"
-		];
-		var audienceLabelsEn = [
-			"No technical experience",
-			"P4 · Junior",
-			"P5 · Engineer / Senior specialist",
-			"P6 · Senior engineer",
-			"P7 · Technical expert",
-			"P8 · Senior expert",
-			"P9 · Principal expert",
-			"P10 · Researcher / Senior director"
-		];
-		var details = [
-			{
-				"value": "concise",
-				"label": "简洁",
-				"description": "只整理核心意图，保留实现空间",
-				"rule": "简洁：增强提示词时用短段或少量条目表达目标、关键范围和硬约束，保留用户提供的技术栈；不展开完整方案。需求对齐只问真正阻塞方向的关键问题，其余留给执行者判断；信息充分可直接生成。"
-			},
-			{
-				"value": "standard",
-				"label": "标准",
-				"description": "补齐主要流程和必要选择",
-				"rule": "标准：增强提示词时补齐主要业务流程、必要技术选择和完成条件，形成便于修改的适中提示词。需求对齐优先确认用途、范围、技术约束与交付，再补会改变主要流程的缺口，常规实现细节留给执行者。"
-			},
-			{
-				"value": "detailed",
-				"label": "详细",
-				"description": "形成具体方案，逐项确认重要缺口",
-				"rule": "详细：增强提示词时直接形成具体、完整、易修改的方案。软件任务按需用「目标、技术栈、核心业务、约束」等短标题，给出可用的技术组合、运行形态、角色、业务闭环、数据和规范；对未指定但可合理补齐的规模与业务参数给出明确建议值，集中简短标明可调整，不能伪称用户确认。需求对齐尽可能问清影响方案的业务和技术细节，题数完全取决于输入缺口和任务理解。例如新系统可涉及用途、规模、功能、角色、入口、设备、具体技术栈、业务规则、追溯、规范和已有数据；这些只是考虑维度，按实际适用性提问，不能套用固定问卷。已明确的内容直接沿用，方向清楚即可生成。"
-			}
-		];
-		var audiences = [
-			{
-				"value": "nontechnical",
-				"label": "无技术经验",
-				"description": "用日常语言确认用途和使用流程",
-				"rule": "无技术经验：先问使用者、用途、操作流程和交付形式，用具体场景解释选项；技术选择给出可落地的推荐和维护成本，不要求用户先懂术语。最终提示词仍包含实现所需的技术约束。"
-			},
-			{
-				"value": "p4",
-				"label": "P4 · 初级专员",
-				"description": "已有技术基础，需要明确的实现指导",
-				"rule": "P4 初级专员：有基础技术能力，能在指导下完成明确任务。问题直达业务与技术选择，技术栈选项给出具体组合及适用差异；结果说明必要的实现边界和规范，保持容易逐项修改，不按零基础教学，也不默认引入复杂架构。"
-			},
-			{
-				"value": "p5",
-				"label": "P5 · 工程师 / 资深专员",
-				"description": "能独立完成复杂任务",
-				"rule": "P5 工程师/资深专员：能独立完成复杂任务；聚焦完整业务流程、接口边界、数据模型与验证，明确必要约束，常规编码细节交给执行者。"
-			},
-			{
-				"value": "p6",
-				"label": "P6 · 高级工程师",
-				"description": "能统筹项目并指导他人",
-				"rule": "P6 高级工程师：能统筹项目并指导他人；关注模块边界、协作依赖、一致性、性能和运维取舍，给出可验收的交付边界。"
-			},
-			{
-				"value": "p7",
-				"label": "P7 · 技术专家",
-				"description": "关注架构取舍和业务影响",
-				"rule": "P7 技术专家：聚焦业务目标与架构取舍、系统演进及主要风险，用关键约束和可验证指标表达，减少常规实现指导。"
-			},
-			{
-				"value": "p8",
-				"label": "P8 · 高级专家",
-				"description": "统筹团队方向与部门协作",
-				"rule": "P8 高级专家：关注团队边界、跨系统依赖、演进成本和部门目标，明确关键决策、交付阶段与治理责任，技术深度按任务需要提供。"
-			},
-			{
-				"value": "p9",
-				"label": "P9 · 资深专家",
-				"description": "关注领域规划和业务决策",
-				"rule": "P9 资深专家：从领域规划和业务价值明确目标、约束、主要取舍及衡量方式，避免用实现细节代替决策。"
-			},
-			{
-				"value": "p10",
-				"label": "P10 · 研究员 / 资深总监",
-				"description": "关注战略判断与长期技术方向",
-				"rule": "P10 研究员/资深总监：聚焦战略假设、长期技术方向、投入产出和验证路径；保留关键不确定性，不堆砌战略术语。"
-			}
-		];
-		//#endregion
-		//#region src/shared/preferences.ts
-		const promptDetails = details;
-		const promptAudiences = audiences;
-		const promptDetailLabelsEn = detailLabelsEn;
-		const promptAudienceLabelsEn = audienceLabelsEn;
 		//#endregion
 		//#region src/client/Settings.tsx
 		function Settings({ api, t, onSaved }) {
@@ -3384,12 +3438,21 @@ window.__ModuleLoader__.load({
 .pk-flyout:not(:popover-open){display:none}
 .pk-flyout::backdrop{background:transparent;pointer-events:none}
 .pk-panel{box-sizing:border-box;display:flex;flex-direction:column;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l2);border-radius:12px;font-size:13px;line-height:1.55;overflow:hidden}
-.pk-menu{min-width:220px;max-width:min(300px,calc(100vw - 16px));padding:4px}
+.pk-menu{width:280px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;padding:4px}
 .pk-mode-menu{display:flex;flex-direction:column;gap:2px}
 .pk-mode-menu button{font:inherit;color:inherit;text-align:left;border:0;background:transparent;border-radius:8px;padding:7px 10px;cursor:pointer}
 .pk-mode-menu button:hover{background:var(--dsw-alias-interactive-bg-hover)}
 .pk-mode-menu button[aria-disabled=true]{opacity:.5;cursor:default;background:transparent}
+.pk-mode-menu [role=menuitem]{display:flex;align-items:center;gap:10px;padding:10px 12px}
 .pk-mode-menu small{display:block;color:var(--dsw-alias-label-secondary);font-size:12px}
+.pk-mode-menu .pk-depth-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 5px 10px;margin-bottom:4px;border-bottom:1px solid var(--dsw-alias-border-l2);font-size:12px;color:var(--dsw-alias-label-secondary)}
+.pk-depth{display:flex;gap:2px;padding:2px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px}
+.pk-mode-menu .pk-depth button{padding:4px 9px;font-size:12px;text-align:center;color:var(--dsw-alias-label-secondary)}
+.pk-mode-menu .pk-depth button[aria-pressed=true]{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}
+.pk-flyout:focus{outline:none}
+.pk-flyout button:focus{outline:none;box-shadow:none}
+.pk-flyout[data-keyboard=true] button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:1px}
+.pk-mode-menu button:focus:not(:focus-visible),.pk-tool:focus:not(:focus-visible),.pk-option:focus:not(:focus-visible){outline:none;box-shadow:none}
 .pk-card>.pk-workflow,.pk-card>.pk-library{flex:1;min-height:0;display:flex;flex-direction:column}
 .pk-head{display:flex;align-items:center;gap:8px;padding:10px 10px 8px 16px;border-bottom:1px solid var(--dsw-alias-border-l2);flex:none}
 .pk-head h2{font-size:14px;font-weight:600;margin:0}
@@ -3461,7 +3524,7 @@ window.__ModuleLoader__.load({
 .pk-row-actions{display:none;align-items:center;gap:1px;padding-top:5px;flex:none}
 .pk-row-item:hover .pk-row-actions,.pk-row-item:focus-within .pk-row-actions{display:flex}
 .pk-row-actions .pk-icon{width:26px;height:26px}
-.pk-empty{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--dsw-alias-label-secondary);padding:24px 0;text-align:center}
+.pk-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--dsw-alias-label-secondary);padding:30px 12px;min-height:100px;text-align:center}
 .pk-empty p{margin:0}
 .pk-edit{gap:12px}
 .pk-check{display:flex;align-items:center;gap:6px}

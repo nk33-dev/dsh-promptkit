@@ -24,7 +24,7 @@ type ConversationMessage = { role: "user" | "assistant"; content: string };
 export function parseResult(
   raw: string,
   forceFinal: boolean,
-  limit = 7,
+  limit = questionLimit("standard"),
 ): Pick<GenerationResult, "kind" | "text" | "questions"> {
   const clean = raw
     .trim()
@@ -220,6 +220,7 @@ export async function generate(
   signal: AbortSignal,
   selection: { provider: string; model: string },
 ): Promise<GenerationResult> {
+  settings = { ...settings, detail: request.detail ?? settings.detail };
   if (
     !(request.mode === "grill"
       ? settings.grillEnabled

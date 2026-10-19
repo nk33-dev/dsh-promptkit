@@ -6,7 +6,7 @@ export const promptAudiences = preferences.audiences;
 export const promptDetailLabelsEn = preferences.detailLabelsEn;
 export const promptAudienceLabelsEn = preferences.audienceLabelsEn;
 export function questionLimit(detail: Settings["detail"]): number {
-  return preferences.questionLimits[detail] ?? 7;
+  return preferences.questionLimits[detail] ?? 10;
 }
 export function outputBudget(detail: Settings["detail"]): number {
   return preferences.outputBudgets[detail] ?? 4096;

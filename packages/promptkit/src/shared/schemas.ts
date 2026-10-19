@@ -143,6 +143,7 @@ export const generationSchema = z
       "输入框为空 / Draft is empty",
     ),
     mode: z.enum(["rewrite", "grill"]),
+    detail: z.enum(["concise", "standard", "detailed"]).optional(),
     scenario: z.string().max(64),
     history: z.array(roundSchema),
     forceFinal: z.boolean(),

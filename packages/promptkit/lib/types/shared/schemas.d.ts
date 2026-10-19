@@ -172,6 +172,11 @@ export declare const generationSchema: z.ZodObject<{
         rewrite: "rewrite";
         grill: "grill";
     }>;
+    detail: z.ZodOptional<z.ZodEnum<{
+        concise: "concise";
+        standard: "standard";
+        detailed: "detailed";
+    }>>;
     scenario: z.ZodString;
     history: z.ZodArray<z.ZodObject<{
         questions: z.ZodArray<z.ZodObject<{

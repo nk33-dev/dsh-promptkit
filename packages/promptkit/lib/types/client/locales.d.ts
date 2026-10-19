@@ -67,14 +67,12 @@ export declare const en: {
     all: string;
     thisProject: string;
     global: string;
-    clickToAppend: string;
     dragHint: string;
     drag: string;
     saveDraft: string;
     newPrompt: string;
     emptyLibrary: string;
     noMatch: string;
-    clearFilter: string;
     showMore: string;
     editPrompt: string;
     title: string;
@@ -110,7 +108,7 @@ export declare const en: {
     addQuestionRequest: string;
     confirm: string;
     multipleChoices: string;
-    confirmChoices: string;
+    continueAnswers: string;
     defer: string;
     deferHint: string;
     delegate: string;

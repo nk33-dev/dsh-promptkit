@@ -8,7 +8,7 @@ TypeScript、React 18、Cordis；pnpm、tsdown、Vitest。Host 使用宿主存�
 - `Enhance.tsx`：生成、累计问卷、补问和结果操作；`questionnaire.ts` 处理推荐排序、多选和历史合并。
 - `Library.tsx`：常用提示词的搜索、筛选、排序、编辑和导入导出。
 - `Management.tsx` / `Settings.tsx`：Harness 设置页。
-- `Popover.tsx`：native popover 卡片定位；菜单不抢焦点。
+- `Popover.tsx`：native popover 定位；鼠标打开聚焦容器，键盘打开聚焦首个控件。
 - `workflow.ts`：按插件实例、会话和模式缓存整理过程，不写磁盘或宿主聊天。
 - `draft.ts` / `useDraft.ts`：原生写回、草稿和项目检查。
 
@@ -32,7 +32,9 @@ pnpm pack:plugin
 
 配置、模型、项目、收藏摘要和正文分别按需读取。生成请求保留 `history/forceFinal` 和 `messages/currentText`；响应为 questions、summary 或 final，final 直接进入可编辑结果，summary 保留旧协议兼容。历史与补充消息合计最多 120000 字节，累计问卷最多 128 题；每次只发送当前答案快照。结构错误保留状态并提示重试。
 
-`shared/preferences.json` 集中深度、画像、问题上限及输出预算，与 Codex3N 对应资产一致。默认标准 + P4，旧设置缺字段时补齐。简洁/标准/详细每次上限为 3/7/15，输出预算为 2048/4096/8192 tokens；实际题数取决于输入缺口。每次只发送选中的画像与深度规则。新设置继续放在原有设置页面。收藏按完整库和标签展示，`untagged` 表示无标签；项目字段只保留旧数据兼容。
+`shared/preferences.json` 集中深度、画像、问题上限及输出预算，与 Codex3N 对应资产一致。默认标准 + P4，旧设置缺字段时补齐。微调/标准/详细每次上限为 5/10/15，输出预算为 2048/4096/8192 tokens；实际题数通常更少。入口菜单的深度以请求 `detail` 覆盖当前流程，设置页保存默认值与画像。每次只发送选中规则，微调以原意等价的专业化表达为边界。
+
+多选即时记录，分页箭头继续；完整问卷在末题通过右箭头提交检查，直接生成始终可用。重新设计的题目清空旧选择，其他已答信息保留。Api 缓存最近成功配置，输入框重挂载时可立即显示入口；菜单和弹窗只在键盘操作时突出焦点，菜单按可用空间定位。收藏空状态通过「全部」或搜索框恢复，`untagged` 表示无标签，项目字段保留旧数据兼容。
 
 项目上下文预算 14000 字符，文件与目录有独立上限。收藏导入先预览新增与重复数量，整次校验失败时不修改原库。
 
@@ -48,6 +50,6 @@ pnpm pack:plugin
 
 与 Codex3N 的 `docs/prompt-enhance.md` 保持行为契约一致。`rules/rewrite.md`、`rules/grill.md` 分别对应其 `assets/prompt-enhance/system-prompt.md`、`grill-system-prompt.md`，内容相同。改规则时两边一起更新，不在运行时依赖另一个仓库。
 
-Harness 继续使用官方输入框槽位、InputActions、消息工厂和 BlockAssembler；独立服务保留三种协议适配。后续修改按 user/assistant 消息发送，currentText 保存用户当前编辑稿。Responses 用 `reasoning.effort`，Chat Completions 用 `reasoning_effort`。空草稿禁用入口，末题禁用下一题，跳过独立；改进支持按钮和回车、输入法保护、错误重试和无变化提示，重新生成保留补充要求。原生 popover 随窗口尺寸与滚动定位。
+Harness 继续使用官方输入框槽位、InputActions、消息工厂和 BlockAssembler；独立服务保留三种协议适配。后续修改按 user/assistant 消息发送，currentText 保存用户当前编辑稿。Responses 用 `reasoning.effort`，Chat Completions 用 `reasoning_effort`。空草稿禁用入口，问卷未完整时末题禁用下一题，跳过独立；改进支持按钮和回车、输入法保护、错误重试和无变化提示，重新生成保留补充要求。原生 popover 随窗口尺寸与滚动定位。
 
 规则参考 OpenAI 提示词工程与 Anthropic 上下文工程：以明确目标和实际输出评估，保留充分信息，减少重复限制和固定流程。来源和语义回归用例见 Codex3N 文档；不把全部画像、长示例和固定执行步骤塞进每次请求。用户自定义规则保持不变，清空规则字段后使用内置版本。

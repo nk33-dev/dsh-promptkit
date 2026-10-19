@@ -1,4 +1,4 @@
-import type { RpcRequest, RpcResponse, Json } from "../shared/types.ts";
+import type { RpcRequest, RpcResponse, Json, Configuration } from "../shared/types.ts";
 import type { RemoteResult } from "@deepseek-ai/dsh-typert-protocol";
 export interface RemoteNamespace {
   request(
@@ -7,6 +7,7 @@ export interface RemoteNamespace {
   ): Promise<RemoteResult<RpcResponse>>;
 }
 export class Api {
+  configuration: Configuration | null = null;
   language: "zh" | "en" = "zh";
   private message(text: string) {
     const parts = text.split(" / ");
@@ -40,6 +41,7 @@ export class Api {
         );
       if (!response.value.ok)
         throw new Error(this.message(response.value.error));
+      if (action === "config.read") this.configuration = response.value.data as unknown as Configuration;
       if (action === "settings.save" || action === "presets.save")
         for (const listener of this.configurationListeners) listener();
       return response.value.data as T;

@@ -28,6 +28,21 @@ function context(chunks: StreamChunk[]) {
   };
 }
 describe("Harness stream integration", () => {
+  it("uses the request depth for rules and output budget without changing the saved default", async () => {
+    const { ctx, stream } = context([
+      { type: "block-end", index: 0, block: { type: "text", text: "Polished" } },
+      { type: "finish", reason: { kind: "stop" } },
+    ]);
+    const settings = defaultSettings();
+    const result = await generate(
+      ctx, settings, { ...request, detail: "concise" },
+      { enabled: false, sections: [] }, DEFAULT_PRESETS,
+      new AbortController().signal, { provider: "test", model: "model" },
+    );
+    expect(stream.mock.calls[0][0].maxTokens).toBe(2048);
+    expect(result.metadata.systemPrompt).toContain("最多提出 5 题");
+    expect(settings.detail).toBe("standard");
+  });
   it("sends edits as native conversation turns with the current editable draft", async () => {
     const { ctx, stream } = context([
       { type: "block-end", index: 0, block: { type: "text", text: "Revised" } },

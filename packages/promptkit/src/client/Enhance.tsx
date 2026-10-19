@@ -124,14 +124,14 @@ export function Enhance({
     if (locked && busy && !restarting.current) cancel();
   }, [locked, busy]);
   useEffect(() => {
-    if (!selected || busy || locked) return;
+    if ((!selected && !result?.text) || busy || locked) return;
     const card = root.current?.closest<HTMLElement>(".pk-card");
     const active = document.activeElement;
     if (card && (!active || active === document.body || active.closest(".pk-tools") && !card.contains(active))) {
       card.tabIndex = -1;
       card.focus({ preventScroll: true });
     }
-  }, [selected, busy, locked]);
+  }, [selected, result?.kind, busy, locked]);
   function busyText({ start, forceFinal, addition }: Run) {
     if (mode === "rewrite")
       return t(!start && addition ? "revising" : "rewriting");
@@ -217,6 +217,7 @@ export function Enhance({
           sessionId: guard.sessionId,
           prompt,
           mode,
+          detail: config.settings.detail,
           scenario: "general",
           history: rounds,
           forceFinal,
@@ -259,31 +260,28 @@ export function Enhance({
       }
     }
   }
-  /** 单选自动继续，多选在确认后提交；回改旧答案时重新检查后续问题。 */
-  function pick(answer: string, complete = false) {
+  /** 多选即时记录，翻页继续；所有题答完后交给模型检查。 */
+  function pick(answer: string) {
     if (!selected || !result || locked) return;
     let value = answer;
     const decision = [deferredAnswer, delegatedAnswer].includes(answer);
-    if (selected.multiSelect && !decision && !complete) {
+    if (selected.multiSelect && !decision) {
       const values = answerValues(answerFor(selected.id));
-      value = JSON.stringify(values.includes(answer) ? values.filter(item => item !== answer) : [...values, answer]);
+      const next = values.includes(answer) ? values.filter(item => item !== answer) : [...values, answer];
+      value = next.length ? JSON.stringify(next) : "";
     }
-    const baseline = history.flatMap(round => round.answers).find(item => item.questionId === selected.id)?.answer;
-    const changed = baseline && baseline !== value;
-    const questions = changed ? result.questions.slice(0, questionIndex + 1) : result.questions;
-    if (changed) {
-      setResult({ ...result, questions });
-      setHistory([]);
-      setMessages([]);
-    }
-    const next = Object.fromEntries(questions.filter(q => q.id === selected.id || answers[q.id]).map(q => [q.id, q.id === selected.id ? value : answers[q.id]]));
+    const questions = result.questions;
+    const next = { ...answers, [selected.id]: value };
     setAnswers(next);
     setOther(null);
-    if (selected.multiSelect && !decision && !complete) return;
+    if (selected.multiSelect && !decision) return;
     if (questionIndex < questions.length - 1)
       setQuestionIndex(questionIndex + 1);
-    else if (changed) void generate({ rounds: [{ questions, answers: questions.flatMap(q => next[q.id] ? [{ questionId: q.id, answer: next[q.id] }] : []) }] });
-    else void generate({ answers: next });
+    else {
+      const missing = questions.findIndex(q => !next[q.id]?.trim());
+      if (missing >= 0) setQuestionIndex(missing);
+      else void generate({ answers: next });
+    }
   }
   function editAnswers() {
     const index = history.length - 1,
@@ -321,7 +319,7 @@ export function Enhance({
       else if (n === question.options.length + 1) setOther(customAnswer(question));
       else if (
         event.key === "ArrowRight" &&
-        questionIndex < result!.questions.length - 1
+        (questionIndex < result!.questions.length - 1 || canSubmitAnswers)
       )
         advance();
       else if (event.key === "ArrowLeft" && questionIndex > 0)
@@ -335,10 +333,15 @@ export function Enhance({
   function customAnswer(question: Question) {
     return answerValues(answerFor(question.id)).find(answer => !question.options.some(option => option.label === answer)) || "";
   }
-  /** 分页只切换题目；跳过通过独立按钮提交。 */
+  const canSubmitAnswers = result?.kind === "questions" && result.questions.length > 0
+    && result.questions.every(q => answerFor(q.id).trim());
+  /** 完整问卷在末题通过箭头提交检查。 */
   function advance() {
-    if (!selected || !result || questionIndex >= result.questions.length - 1)
+    if (!selected || !result) return;
+    if (questionIndex >= result.questions.length - 1) {
+      if (canSubmitAnswers) void generate();
       return;
+    }
     setQuestionIndex(questionIndex + 1);
     setOther(null);
   }
@@ -543,7 +546,6 @@ export function Enhance({
             <div className="pk-decisions">
               <button type="button" className="pk-link" disabled={locked} aria-pressed={answerFor(selected.id) === deferredAnswer} title={t("deferHint")} onClick={() => pick(deferredAnswer)}>{t("defer")}</button>
               <button type="button" className="pk-link" disabled={locked} aria-pressed={answerFor(selected.id) === delegatedAnswer} title={t("delegateHint")} onClick={() => pick(delegatedAnswer)}>{t("delegate")}</button>
-              {selected.multiSelect && <Button primary disabled={locked || !answerValues(answerFor(selected.id)).length} onClick={() => pick(answerFor(selected.id), true)}>{t("confirmChoices")}</Button>}
             </div>
             {extra && <form className="pk-follow-row" onSubmit={event => {
               event.preventDefault();
@@ -638,8 +640,8 @@ export function Enhance({
             </IconButton>
             <span className="pk-dots" role="group" aria-label={t("questions")}>{result!.questions.map((q, index) => <button type="button" key={q.id} className="pk-dot" aria-label={`${index + 1}. ${q.title}`} aria-current={index === questionIndex ? "step" : undefined} data-answered={!!answerFor(q.id)} disabled={locked} onClick={() => { setQuestionIndex(index); setOther(null); setExtra(null); }}>{index + 1}</button>)}</span>
             <IconButton
-              label={t("nextQuestion")}
-              disabled={locked || questionIndex >= result!.questions.length - 1}
+              label={t(questionIndex === result!.questions.length - 1 && canSubmitAnswers ? "continueAnswers" : "nextQuestion")}
+              disabled={locked || (questionIndex >= result!.questions.length - 1 && !canSubmitAnswers)}
               onClick={advance}
             >
               <ChevronRight size={16} aria-hidden />

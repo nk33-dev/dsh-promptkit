@@ -95,6 +95,7 @@ export interface GenerationRequest {
     sessionId: string;
     prompt: string;
     mode: Mode;
+    detail?: Settings["detail"];
     scenario: string;
     history: Round[];
     forceFinal: boolean;

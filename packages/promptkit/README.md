@@ -14,6 +14,6 @@ github:nk33-dev/dsh-promptkit#path:/packages/promptkit
 
 Then enable the plugin and restart Harness. Configure models, rules, project context and import/export under **Harness Settings → PromptKit**.
 
-Choose **Concise / Standard / Detailed** and an audience profile from **No technical experience** through **P4–P10**. Clarification asks about actual gaps, supports multiple choices and custom answers, and generates once the direction is clear. “Decide later” and “You decide” keep separate meanings. Saved prompts are shared across sessions; General means untagged.
+Choose **Polish / Standard / Detailed** in the entry menu and an audience profile from **No technical experience** through **P4–P10** in Settings. Clarification asks about actual gaps, records multiple choices immediately, and generates once the direction is clear. Follow-up questions target unclear or conflicting answers. “Decide later” and “You decide” keep separate meanings. Saved prompts are shared across sessions; General means untagged.
 
 MIT. Source: https://github.com/nk33-dev/dsh-promptkit

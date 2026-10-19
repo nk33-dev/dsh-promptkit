@@ -13,7 +13,7 @@ export function composerOf(anchor: HTMLElement): HTMLElement {
 /**
  * 原生 popover="auto"：Esc 和点击外部由浏览器关闭。
  * 菜单贴着图标弹出；卡片浮在输入框上方，与输入框同宽。
- * 鼠标打开时不抢焦点，避免出现焦点环；键盘打开时聚焦第一个控件。
+ * 鼠标打开时聚焦容器，键盘打开时聚焦第一个控件。
  */
 export function Popover({
   anchor,
@@ -43,7 +43,8 @@ export function Popover({
         const rect = anchor.getBoundingClientRect(),
           bounds = element.getBoundingClientRect();
         element.style.left = `${Math.max(8, Math.min(rect.right - bounds.width, innerWidth - bounds.width - 8))}px`;
-        element.style.top = `${rect.top - bounds.height - 8 >= 8 ? rect.top - bounds.height - 8 : rect.bottom + 8}px`;
+        const above = rect.top - bounds.height - 8;
+        element.style.top = `${Math.max(8, Math.min(above >= 8 ? above : rect.bottom + 8, innerHeight - bounds.height - 8))}px`;
         return;
       }
       const box = composer.getBoundingClientRect(),
@@ -79,6 +80,7 @@ export function Popover({
           "[role=menuitem],.pk-body input,.pk-body textarea,.pk-body button,.pk-foot button",
         )
         ?.focus();
+    else element.focus({ preventScroll: true });
     return () => {
       element.removeEventListener("toggle", toggle);
       observer.disconnect();
@@ -93,8 +95,12 @@ export function Popover({
     <div
       ref={panel}
       className={`pk-panel pk-flyout${menu ? " pk-menu" : " pk-card"}`}
+      tabIndex={-1}
       role={menu ? "menu" : "dialog"}
       aria-label={label}
+      data-keyboard={focusFirst || undefined}
+      onKeyDownCapture={event => { event.currentTarget.dataset.keyboard = "true"; }}
+      onPointerDownCapture={event => { event.currentTarget.dataset.keyboard = "false"; }}
     >
       {children}
     </div>

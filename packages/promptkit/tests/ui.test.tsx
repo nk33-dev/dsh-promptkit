@@ -120,6 +120,7 @@ function setup(
         return {
           items: [saved, second]
             .filter((v) => !payload?.tag || v.tags.includes(payload.tag))
+            .filter((v) => !payload?.query || `${v.title} ${v.body}`.toLowerCase().includes(payload.query.toLowerCase()))
             .map(({ body, ...v }) => ({ ...v, excerpt: body })),
           revision: 0,
           total: 2,
@@ -187,6 +188,17 @@ async function start(mode: "grill" | "rewrite" = "grill") {
 }
 const option = (name: RegExp) => screen.findByRole("radio", { name });
 describe("entry", () => {
+  it("selects depth in the menu and sends it with the generation request", async () => {
+    const { generations, call } = setup();
+    fireEvent.click(await screen.findByRole("button", { name: en.generate }));
+    const depths = within(screen.getByRole("group", { name: en.detail }));
+    fireEvent.click(depths.getByRole("button", { name: "Polish" }));
+    expect(depths.getByRole("button", { name: "Polish" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("menuitem", { name: new RegExp(en.generate) }));
+    await screen.findByLabelText(en.result);
+    expect((generations()[0][1] as any).detail).toBe("concise");
+    expect(call.mock.calls.some(item => item[0] === "settings.save")).toBe(false);
+  });
   it("closes the old workflow when audience or depth changes", async () => {
     const value = structuredClone(config);
     const { notifyConfiguration } = setup(async () => final, value);
@@ -276,6 +288,29 @@ describe("entry", () => {
     fireEvent.keyDown(items[0], { key: "ArrowDown" });
     expect(document.activeElement).toBe(items[1]);
   });
+  it("focuses the menu container for a pointer opening and the first mode for a keyboard opening", async () => {
+    setup();
+    const trigger = await screen.findByRole("button", { name: en.generate });
+    fireEvent.click(trigger, { detail: 1 });
+    expect(document.activeElement).toBe(screen.getByRole("menu"));
+    expect(screen.getByRole("menu").dataset.keyboard).toBeUndefined();
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Tab" });
+    expect(screen.getByRole("menu").dataset.keyboard).toBe("true");
+    fireEvent.click(trigger, { detail: 1 });
+    fireEvent.click(trigger, { detail: 0 });
+    expect(document.activeElement).toBe(screen.getAllByRole("menuitem")[0]);
+    expect(screen.getByRole("menu").dataset.keyboard).toBe("true");
+  });
+  it("shows cached entries immediately while a remounted composer refreshes configuration", async () => {
+    const { props, unmount } = setup();
+    await screen.findByRole("button", { name: en.generate });
+    props.api.configuration = config;
+    unmount();
+    vi.mocked(props.api.call).mockImplementation(() => new Promise(() => {}));
+    render(<App {...props} />);
+    expect(screen.getByRole("button", { name: en.generate })).toBeTruthy();
+    expect(screen.getByRole("button", { name: en.library })).toBeTruthy();
+  });
 });
 describe("clarify needs", () => {
   it("puts the recommendation first and uses matching keyboard numbers", async () => {
@@ -287,15 +322,58 @@ describe("clarify needs", () => {
     await screen.findByLabelText(en.result);
     expect((generations()[1][1] as any).history[0].answers[0].answer).toBe("Everything");
   });
-  it("collects multiple choices before continuing", async () => {
+  it("records multiple choices and continues through the navigation arrow", async () => {
     const { generations } = setup(async () => generations().length === 1 ? { ...questions, questions: [{ ...q, multiSelect: true }] } : final);
     await start();
     fireEvent.click(await screen.findByRole("checkbox", { name: /Core only/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: /Everything/ }));
     expect(generations()).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: en.confirmChoices }));
+    expect(screen.queryByRole("button", { name: "选好了" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: en.continueAnswers }));
     await screen.findByLabelText(en.result);
     expect(JSON.parse((generations()[1][1] as any).history[0].answers[0].answer)).toEqual(["Core only", "Everything"]);
+    expect(document.activeElement).toBe(screen.getByRole("dialog"));
+  });
+  it("submits an already answered last question after filling an earlier missing choice", async () => {
+    const { generations } = setup(async () => generations().length === 1
+      ? { ...questions, questions: [{ ...q, multiSelect: true }, { ...q, id: "stack", title: "Stack", question: "Which stack?" }] }
+      : final);
+    await start();
+    await screen.findByRole("checkbox", { name: /Core only/ });
+    fireEvent.click(screen.getByRole("button", { name: en.nextQuestion }));
+    fireEvent.click(await option(/Everything/));
+    expect(await screen.findByRole("checkbox", { name: /Core only/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Core only/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Core only/ }));
+    fireEvent.click(screen.getByRole("button", { name: "2. Stack" }));
+    expect((screen.getByRole("button", { name: en.nextQuestion }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "1. Scope" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Core only/ }));
+    fireEvent.click(screen.getByRole("button", { name: en.nextQuestion }));
+    fireEvent.click(screen.getByRole("button", { name: en.continueAnswers }));
+    await screen.findByLabelText(en.result);
+    const payload = generations()[1][1] as any;
+    expect(payload.forceFinal).toBe(false);
+    expect(payload.history[0].answers).toEqual([
+      { questionId: "scope", answer: '["Core only"]' },
+      { questionId: "stack", answer: "Everything" },
+    ]);
+  });
+  it("redesigns an unclear question across rounds without accepting the old answer", async () => {
+    const { generations } = setup(async () => generations().length === 1 ? questions
+      : generations().length === 2 ? { ...questions, questions: [{ ...q, question: "Do you want a search page or a borrowing workflow?", basis: "The previous answer did not specify the scope." }] } : final);
+    await start();
+    fireEvent.click(await option(new RegExp(en.other)));
+    const field = screen.getByLabelText(en.other);
+    fireEvent.change(field, { target: { value: "I do not understand these options" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    await screen.findByText("Do you want a search page or a borrowing workflow?");
+    expect((generations()[1][1] as any).forceFinal).toBe(false);
+    expect((generations()[1][1] as any).history[0].answers[0].answer).toContain("do not understand");
+    expect((await option(/Core only/)).getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(await option(/Everything/));
+    await screen.findByLabelText(en.result);
+    expect((generations()[2][1] as any).history[0].answers).toEqual([{ questionId: q.id, answer: "Everything" }]);
   });
   it("delegates explicitly and keeps prior questions available after follow-up", async () => {
     const { generations } = setup(async () => generations().length === 1 ? questions : generations().length === 2 ? { ...questions, questions: [{ ...q, id: "rules", title: "Rules", question: "Any borrowing limit?" }] } : final);
@@ -619,6 +697,17 @@ describe("saved prompts", () => {
     fireEvent.click(await screen.findByRole("button", { name: en.library }));
     return screen.findByRole("button", { name: /^Saved review/ });
   }
+  it("keeps an empty search to a caption and restores results when the query is cleared", async () => {
+    setup();
+    await openLibrary();
+    const search = screen.getByRole("searchbox");
+    fireEvent.change(search, { target: { value: "no matching prompt" } });
+    await screen.findByText(en.noMatch);
+    expect(screen.getAllByRole("button", { name: en.saveDraft })).toHaveLength(1);
+    expect(document.querySelector(".pk-empty button")).toBeNull();
+    fireEvent.change(search, { target: { value: "" } });
+    expect(await screen.findByRole("button", { name: /^Saved review/ })).toBeTruthy();
+  });
   it("appends on click, closes and touches the prompt", async () => {
     const { call, props } = setup();
     fireEvent.click(await openLibrary());

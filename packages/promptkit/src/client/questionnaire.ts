@@ -22,7 +22,10 @@ export function mergeQuestionnaire(rounds: Round[], incoming: Question[]) {
     for (const question of round.questions) questions.set(question.id, orderedQuestion(question));
     for (const answer of round.answers) answers[answer.questionId] = answer.answer;
   }
-  for (const question of incoming) questions.set(question.id, orderedQuestion(question));
+  for (const question of incoming) {
+    questions.set(question.id, orderedQuestion(question));
+    delete answers[question.id];
+  }
   const all = [...questions.values()];
   if (all.length > 128) throw new Error("问题记录过长，请直接生成 / Too many questions; generate now");
   const first = incoming[0];

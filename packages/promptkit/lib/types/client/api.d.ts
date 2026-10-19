@@ -1,10 +1,11 @@
-import type { RpcRequest, RpcResponse } from "../shared/types.ts";
+import type { RpcRequest, RpcResponse, Configuration } from "../shared/types.ts";
 import type { RemoteResult } from "@deepseek-ai/dsh-typert-protocol";
 export interface RemoteNamespace {
     request(request: RpcRequest, signal?: AbortSignal): Promise<RemoteResult<RpcResponse>>;
 }
 export declare class Api {
     private readonly namespace;
+    configuration: Configuration | null;
     language: "zh" | "en";
     private message;
     private readonly controllers;

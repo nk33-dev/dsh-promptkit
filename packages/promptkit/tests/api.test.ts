@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { Api } from "../src/client/api.ts";
+import { defaultSettings } from "../src/shared/defaults.ts";
 describe("Gateway lifecycle", () => {
+  it("keeps configuration available while the composer remounts after sending", async () => {
+    const config = { settings: defaultSettings(), revision: 1, presets: [] };
+    const api = new Api({ request: async () => ({ ok: true, value: { ok: true, data: config, error: "" } }) });
+    await api.call("config.read", {});
+    expect(api.configuration).toEqual(config);
+  });
   it("notifies mounted consumers after successful configuration saves and removes listeners", async () => {
     const request = vi.fn(async () => ({
       ok: true as const,

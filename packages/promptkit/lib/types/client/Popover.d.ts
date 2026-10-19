@@ -4,7 +4,7 @@ export declare function composerOf(anchor: HTMLElement): HTMLElement;
 /**
  * 原生 popover="auto"：Esc 和点击外部由浏览器关闭。
  * 菜单贴着图标弹出；卡片浮在输入框上方，与输入框同宽。
- * 鼠标打开时不抢焦点，避免出现焦点环；键盘打开时聚焦第一个控件。
+ * 鼠标打开时聚焦容器，键盘打开时聚焦第一个控件。
  */
 export declare function Popover({ anchor, label, onClose, children, menu, focusFirst, }: {
     anchor: HTMLElement;
