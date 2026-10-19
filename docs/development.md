@@ -62,6 +62,6 @@ P4＋详细原型仅展示一个任务的输出。回归覆盖审查、修复、
 
 与 Codex3N 的 `docs/prompt-enhance.md` 保持行为契约一致。`rules/rewrite.md`、`rules/grill.md` 分别对应其 `assets/prompt-enhance/system-prompt.md`、`grill-system-prompt.md`，内容相同。改规则时两边一起更新，不在运行时依赖另一个仓库。
 
-Harness 继续使用官方输入框槽位、InputActions、消息工厂和 BlockAssembler；独立服务保留三种协议适配。后续修改按 user/assistant 消息发送，currentText 保存用户当前编辑稿。Responses 用 `reasoning.effort`，Chat Completions 用 `reasoning_effort`。空草稿禁用入口，问卷未完整时末题禁用下一题，跳过独立；改进支持按钮和回车、输入法保护、错误重试和无变化提示，重新生成保留补充要求。原生 popover 随窗口尺寸与滚动定位。
+Harness 继续使用官方输入框槽位、InputActions、消息工厂和 BlockAssembler；独立服务保留三种协议适配。后续修改按 user/assistant 消息发送，currentText 保存用户当前编辑稿。Responses 用 `reasoning.effort`，Chat Completions 用 `reasoning_effort`。空草稿禁用入口，问卷未完整时末题禁用下一题，跳过独立；改进支持按钮和回车、输入法保护、错误重试和无变化提示，重新生成保留补充要求；改答案后未改动就继续或直接生成时恢复上次结果，不再请求模型。原生 popover 随窗口尺寸与滚动定位。
 
 规则参考 OpenAI 提示词工程与 Anthropic 上下文工程：以明确目标和实际输出评估，保留充分信息，减少重复限制和固定流程。来源和语义回归用例见 Codex3N 文档；不把全部画像、长示例和固定执行步骤塞进每次请求。用户自定义规则保持不变，清空规则字段后使用内置版本。

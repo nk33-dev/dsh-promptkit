@@ -1,6 +1,6 @@
 {
   "name": "@nk33-dev/dsh-promptkit",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Turn rough ideas into prompts that work in DeepSeek Harness, with guided questions, project context, and reusable prompts.",
   "license": "MIT",
   "type": "module",
