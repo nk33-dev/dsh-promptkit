@@ -13,8 +13,8 @@ export function outputBudget(detail: Settings["detail"]): number {
 }
 export function generationGuidance(settings: Pick<Settings, "detail" | "audience">): string {
   return [
-    promptDetails.find(item => item.value === settings.detail)?.rule ?? promptDetails[1].rule,
     promptAudiences.find(item => item.value === settings.audience)?.rule ?? promptAudiences[1].rule,
+    promptDetails.find(item => item.value === settings.detail)?.rule ?? promptDetails[1].rule,
     `本次最多提出 ${questionLimit(settings.detail)} 题；这是上限，不是题数目标。`,
   ].join("\n");
 }

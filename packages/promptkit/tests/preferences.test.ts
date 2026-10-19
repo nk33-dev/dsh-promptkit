@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generationGuidance, promptAudiences, questionLimit, outputBudget } from "../src/shared/preferences.ts";
+import { generationGuidance, promptAudiences, promptDetails, questionLimit, outputBudget } from "../src/shared/preferences.ts";
 import { defaultSettings } from "../src/shared/defaults.ts";
 import { settingsSchema } from "../src/shared/schemas.ts";
 import { parseResult } from "../src/host/model.ts";
@@ -28,6 +28,8 @@ describe("generation preferences", () => {
     for (const audience of promptAudiences) {
       const text = generationGuidance({ detail: "detailed", audience: audience.value as ReturnType<typeof defaultSettings>["audience"] });
       expect(text).toContain(audience.rule);
+      expect(text).toContain("实际读者、任务类型、范围和格式以用户要求为准");
+      expect(text.indexOf(promptDetails[2].rule)).toBeGreaterThan(text.indexOf(audience.rule));
       for (const other of promptAudiences.filter(item => item !== audience)) expect(text).not.toContain(other.rule);
     }
   });
