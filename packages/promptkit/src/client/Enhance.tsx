@@ -46,6 +46,13 @@ export type WriteBack = (
   revision: number,
 ) => void;
 
+/** 已作答的题目按题序序列化，用来判断改答案后是否真的改动过。 */
+function confirmedAnswers(questions: Question[], answers: Record<string, string>) {
+  return JSON.stringify(questions
+    .map((q) => ({ questionId: q.id, answer: (Object.hasOwn(answers, q.id) ? answers[q.id] : "").trim() }))
+    .filter((a) => a.answer));
+}
+
 export function Enhance({
   api,
   t,
@@ -85,7 +92,9 @@ export function Enhance({
   const request = useRef<AbortController | null>(null),
     generation = useRef(0),
     restarting = useRef(false),
-    last = useRef<() => void>(() => {});
+    last = useRef<() => void>(() => {}),
+    // 改答案时的快照：什么都没改就继续或直接生成时恢复，不再请求模型。
+    reopened = useRef<{ questions: Question[]; answers: string; restore: () => void } | null>(null);
   const title = t(mode === "grill" ? "grill" : "generate");
   const selected =
     result?.kind === "questions" ? result.questions[questionIndex] : undefined;
@@ -146,6 +155,14 @@ export function Enhance({
     if (!start && locked) return;
     const addition = run.addition ?? "";
     const current = run.answers ?? answers;
+    const snapshot = reopened.current;
+    reopened.current = null;
+    if (snapshot && !start && !addition && run.rounds === undefined && result?.kind === "questions"
+      && result.questions === snapshot.questions && confirmedAnswers(result.questions, current) === snapshot.answers) {
+      snapshot.restore();
+      notify(t("answersUnchanged"));
+      return;
+    }
     let rounds = start ? [] : (run.rounds ?? history);
     if (!start && run.rounds === undefined && result?.kind === "questions") {
       const confirmed = result.questions
@@ -294,13 +311,29 @@ export function Enhance({
     const index = history.length - 1,
       round = history[index];
     if (!round || !result) return;
+    const before = { result, edited, history, messages, supplement };
+    const restored = Object.fromEntries(round.answers.map((a) => [a.questionId, a.answer]));
+    reopened.current = {
+      questions: round.questions,
+      answers: confirmedAnswers(round.questions, restored),
+      restore: () => {
+        setResult(before.result);
+        setEdited(before.edited);
+        setHistory(before.history);
+        setMessages(before.messages);
+        setSupplement(before.supplement);
+        setAnswers({});
+        setQuestionIndex(0);
+        setOther(null);
+        setExtra(null);
+        task.setError("");
+      },
+    };
     setHistory(history.slice(0, index));
     setMessages(messages.filter((message) => (message.round ?? 0) <= index));
     setEdited("");
     setResult({ ...result, kind: "questions", text: "", questions: round.questions });
-    setAnswers(
-      Object.fromEntries(round.answers.map((a) => [a.questionId, a.answer])),
-    );
+    setAnswers(restored);
     setQuestionIndex(0);
     task.setError("");
   }
@@ -550,10 +583,6 @@ export function Enhance({
                 </button>
               )}
             </div>
-            <div className="pk-decisions">
-              <button type="button" className="pk-link" disabled={locked} aria-pressed={answerFor(selected.id) === deferredAnswer} title={t("deferHint")} onClick={() => pick(deferredAnswer)}>{t("defer")}</button>
-              <button type="button" className="pk-link" disabled={locked} aria-pressed={answerFor(selected.id) === delegatedAnswer} title={t("delegateHint")} onClick={() => pick(delegatedAnswer)}>{t("delegate")}</button>
-            </div>
             {extra && <form className="pk-follow-row" onSubmit={event => {
               event.preventDefault();
               const value = extraText.trim();
@@ -624,6 +653,12 @@ export function Enhance({
           </>
         )}
       </div>
+      {view === "questions" && selected && (
+        <div className="pk-decisions">
+          <button type="button" className="pk-link" disabled={locked} aria-pressed={answerFor(selected.id) === deferredAnswer} title={t("deferHint")} onClick={() => pick(deferredAnswer)}>{t("defer")}</button>
+          <button type="button" className="pk-link" disabled={locked} aria-pressed={answerFor(selected.id) === delegatedAnswer} title={t("delegateHint")} onClick={() => pick(delegatedAnswer)}>{t("delegate")}</button>
+        </div>
+      )}
       <ErrorBar
         error={task.error}
         t={t}

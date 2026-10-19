@@ -68,7 +68,7 @@ export const css = `
 .pk-dot{font:inherit;font-size:11px;width:23px;height:23px;flex:none;border:1px solid var(--dsw-alias-border-l2);border-radius:50%;background:transparent;color:var(--dsw-alias-label-secondary);padding:0;cursor:pointer}
 .pk-dot[aria-current=step]{border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-label-primary)}
 .pk-dot[data-answered=true]{background:var(--dsw-alias-interactive-bg-hover)}
-.pk-decisions{position:sticky;bottom:0;display:flex;align-items:center;gap:12px;padding:12px 0 4px;background:var(--dsw-alias-bg-base);flex:none}.pk-decisions .pk-link{font-size:12px;color:var(--dsw-alias-label-secondary)}.pk-decisions [aria-pressed=true]{color:var(--dsw-alias-state-business-primary)}
+.pk-decisions{display:flex;align-items:center;gap:12px;padding:8px 18px;border-top:1px solid var(--dsw-alias-border-l2);flex:none}.pk-decisions .pk-link{font-size:12px;color:var(--dsw-alias-label-secondary)}.pk-decisions [aria-pressed=true]{color:var(--dsw-alias-state-business-primary)}
 .pk-basis{line-height:1.7;margin-bottom:2px}.pk-options{gap:8px}.pk-option{padding:12px 10px}.pk-head{padding:14px 18px}.pk-body{padding:18px;gap:16px}.pk-foot{padding:12px 18px}.pk-question{font-size:15px}
 .pk-more{position:relative;font-size:12px}.pk-more summary{list-style:none;border:1px solid var(--dsw-alias-border-l2);padding:5px 10px;border-radius:8px}
 .pk-more-menu{position:fixed;z-index:2;transform:translate(-95px,-135px);padding:5px;display:flex;flex-direction:column;gap:3px;background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l2);border-radius:8px}
@@ -138,5 +138,5 @@ export const css = `
 .pk-import .pk-file{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer}
 .pk-import:focus-within{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:1px}
 @media(hover:none){.pk-row-actions{display:flex}.pk-grip{opacity:1}}
-@media(max-width:600px){.pk-body{padding:10px 12px}.pk-head{padding:8px 8px 6px 12px}.pk-foot{padding:8px}}
+@media(max-width:600px){.pk-body{padding:10px 12px}.pk-decisions{padding:6px 12px}.pk-head{padding:8px 8px 6px 12px}.pk-foot{padding:8px}}
 `;

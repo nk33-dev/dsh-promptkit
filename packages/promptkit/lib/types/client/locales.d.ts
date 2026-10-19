@@ -43,6 +43,7 @@ export declare const en: {
     revise: string;
     improve: string;
     unchangedResult: string;
+    answersUnchanged: string;
     regenerateRequest: string;
     regenerate: string;
     copy: string;

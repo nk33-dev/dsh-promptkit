@@ -535,6 +535,21 @@ describe("clarify needs", () => {
     expect(history).toHaveLength(1);
     expect(history[0].answers[0].answer).toBe("Everything");
   });
+  it("restores the previous result when answers are reopened but not changed", async () => {
+    const { generations } = setup(async () => generations().length === 1 ? questions : final);
+    await start();
+    fireEvent.click(await option(/Core only/));
+    await screen.findByLabelText(en.result);
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(en.changeAnswers) }));
+    expect((await option(/Core only/)).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: en.direct }));
+    await screen.findByLabelText(en.result);
+    expect(generations()).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(en.changeAnswers) }));
+    fireEvent.click(await option(/Everything/));
+    await waitFor(() => expect(generations()).toHaveLength(3));
+    expect((generations()[2][1] as any).history[0].answers[0].answer).toBe("Everything");
+  });
   it("stops asking and writes when requested", async () => {
     const { generations } = setup(async () =>
       generations().length === 1 ? questions : final,
