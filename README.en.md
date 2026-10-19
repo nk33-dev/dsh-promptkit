@@ -22,7 +22,7 @@ For source installs and development, see [Development](docs/development.md).
 
 ## Features
 
-- **Enhance prompt**: produces a prompt that an executor such as Claude Code or Codex can act on directly, never a list of questions. Decisions the executor can make are settled; facts only you know become fill-in blanks such as 【list page URL】.
+- **Enhance prompt**: completes a draft into a ready-to-send prompt rather than a list of questions. Choices that can be made are written out; facts only you know become fill-in blanks such as 【list page URL】.
 - **Clarify needs**: asks about missing decisions with a recommended choice and rationale for single-choice questions, plus multiple selection, custom answers, “Decide later” and “You decide.” Small facts become blanks instead of extra questions. It generates when the direction is clear and follows up only on ambiguity, conflicts or important gaps.
 - **Saved prompts**: live search, tag filters and drag to reorder across sessions. General means untagged. Click a row to append; hover to replace or edit; deletion can be undone.
 - **Safe write-back**: edit the result, then append or replace. Replacement can be undone; nothing is sent automatically.

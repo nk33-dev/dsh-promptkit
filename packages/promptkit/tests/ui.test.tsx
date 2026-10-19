@@ -190,8 +190,10 @@ const option = (name: RegExp) => screen.findByRole("radio", { name });
 describe("entry", () => {
   it("selects depth in the menu and sends it with the generation request", async () => {
     const { generations, call } = setup();
+    // 入口可能先按缓存配置渲染；等配置读取完成再打开菜单，否则深度变化会按设计关闭菜单。
+    await act(() => call.mock.results[0].value);
     fireEvent.click(await screen.findByRole("button", { name: en.generate }));
-    const depths = within(screen.getByRole("group", { name: en.detail }));
+    const depths = within(await screen.findByRole("group", { name: en.detail }));
     fireEvent.click(depths.getByRole("button", { name: "Polish" }));
     expect(depths.getByRole("button", { name: "Polish" }).getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(screen.getByRole("menuitem", { name: new RegExp(en.generate) }));
