@@ -3,7 +3,9 @@ import { gunzipSync } from "node:zlib";
 import { createHash } from "node:crypto";
 import { verifyClientBundle } from "./verify-client.mjs";
 
-const path = "dist/dsh-promptkit-0.1.4.tgz";
+// 版本取自插件 package.json，避免发版后仍校验旧归档。
+const { version } = JSON.parse(await readFile("packages/promptkit/package.json", "utf8"));
+const path = `dist/dsh-promptkit-${version}.tgz`;
 const archive = await readFile(path),
   tar = gunzipSync(archive),
   files = new Map();
