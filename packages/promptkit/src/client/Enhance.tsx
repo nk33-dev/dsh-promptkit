@@ -499,7 +499,10 @@ export function Enhance({
         {view === "questions" && selected && (
           <>
             <div className="pk-question-row">
-              <h3 className="pk-question">{selected.question}</h3>
+              <h3 className="pk-question">
+                {selected.question}
+                {selected.multiSelect && <span className="pk-multi">{t("multipleChoices")}</span>}
+              </h3>
               <IconButton
                 label={t("rephrase")}
                 disabled={locked}
@@ -511,7 +514,6 @@ export function Enhance({
               </IconButton>
             </div>
             {selected.basis && <p className="pk-caption pk-basis">{selected.basis}</p>}
-            {selected.multiSelect && <p className="pk-caption pk-multi">{t("multipleChoices")}</p>}
             <div
               role={selected.multiSelect ? "group" : "radiogroup"}
               aria-label={selected.question}

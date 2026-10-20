@@ -59,7 +59,7 @@ export const css = `
 .pk-option-number{display:inline-flex;align-items:center;justify-content:center;flex:none;width:22px;height:22px;border-radius:5px;background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);font-size:12px;margin-top:1px}
 .pk-check{display:inline-flex;align-items:center;justify-content:center;flex:none;box-sizing:border-box;width:16px;height:16px;margin:4px 3px 0;border:1.5px solid var(--dsw-alias-label-secondary);border-radius:4px}
 .pk-option[aria-checked=true] .pk-check{border-color:var(--dsw-alias-state-business-primary);background:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-bg-base)}
-.pk-multi{font-weight:500}
+.pk-multi{display:inline-block;margin-left:8px;padding:0 7px;border:1px solid currentColor;border-radius:999px;font-size:11px;font-weight:500;line-height:17px;vertical-align:1px;color:var(--dsw-alias-state-business-primary)}
 .pk-option-editing{align-items:center;border-color:var(--dsw-alias-state-business-primary);cursor:text}
 .pk-option-editing input{flex:1;min-width:0;font:inherit;color:inherit;background:transparent;border:0;outline:none;padding:2px 0}
 .pk-badge{color:var(--dsw-alias-state-business-primary);font-size:11px;margin-left:6px}

@@ -1040,7 +1040,7 @@ window.__ModuleLoader__.load({
 			addQuestion: "Add question",
 			addQuestionRequest: "Add a question to clarify this decision:",
 			confirm: "Confirm",
-			multipleChoices: "Choose all that apply, then press › to continue",
+			multipleChoices: "Multi-select",
 			continueAnswers: "Review answers",
 			defer: "Decide later",
 			deferHint: "Keep this unresolved",
@@ -1192,7 +1192,7 @@ window.__ModuleLoader__.load({
 			addQuestion: "补充问题",
 			addQuestionRequest: "请补充一道问题来确认这个决策：",
 			confirm: "确认",
-			multipleChoices: "可多选，选好后点 › 继续",
+			multipleChoices: "多选",
 			continueAnswers: "继续检查回答",
 			defer: "暂不决定",
 			deferHint: "保留待定，暂不代选",
@@ -1912,9 +1912,12 @@ window.__ModuleLoader__.load({
 							view === "questions" && selected && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 									className: "pk-question-row",
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("h3", {
 										className: "pk-question",
-										children: selected.question
+										children: [selected.question, selected.multiSelect && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: "pk-multi",
+											children: t("multipleChoices")
+										})]
 									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconButton, {
 										label: t("rephrase"),
 										disabled: locked,
@@ -1931,10 +1934,6 @@ window.__ModuleLoader__.load({
 								selected.basis && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 									className: "pk-caption pk-basis",
 									children: selected.basis
-								}),
-								selected.multiSelect && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-									className: "pk-caption pk-multi",
-									children: t("multipleChoices")
 								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 									role: selected.multiSelect ? "group" : "radiogroup",
@@ -3573,7 +3572,7 @@ window.__ModuleLoader__.load({
 .pk-option-number{display:inline-flex;align-items:center;justify-content:center;flex:none;width:22px;height:22px;border-radius:5px;background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);font-size:12px;margin-top:1px}
 .pk-check{display:inline-flex;align-items:center;justify-content:center;flex:none;box-sizing:border-box;width:16px;height:16px;margin:4px 3px 0;border:1.5px solid var(--dsw-alias-label-secondary);border-radius:4px}
 .pk-option[aria-checked=true] .pk-check{border-color:var(--dsw-alias-state-business-primary);background:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-bg-base)}
-.pk-multi{font-weight:500}
+.pk-multi{display:inline-block;margin-left:8px;padding:0 7px;border:1px solid currentColor;border-radius:999px;font-size:11px;font-weight:500;line-height:17px;vertical-align:1px;color:var(--dsw-alias-state-business-primary)}
 .pk-option-editing{align-items:center;border-color:var(--dsw-alias-state-business-primary);cursor:text}
 .pk-option-editing input{flex:1;min-width:0;font:inherit;color:inherit;background:transparent;border:0;outline:none;padding:2px 0}
 .pk-badge{color:var(--dsw-alias-state-business-primary);font-size:11px;margin-left:6px}
