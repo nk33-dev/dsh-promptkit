@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { defaultSettings } from "../src/shared/defaults.ts";
-import { generationSchema } from "../src/shared/schemas.ts";
+import { generationSchema, roundSchema } from "../src/shared/schemas.ts";
 import {
   endpoint,
   independentRequest,
@@ -261,6 +261,23 @@ describe("model protocols and question boundaries", () => {
       parseResult("```json\n" + raw + "\n```", false).questions,
     ).toHaveLength(1);
     expect(() => parseResult(raw, true)).toThrow("模型仍在追问");
+  });
+  it("normalizes slightly off questions instead of failing the batch", () => {
+    const options = (n: number) => Array.from({ length: n }, (_, i) => ({ label: `选项${i}`, description: "说明" }));
+    const raw = JSON.stringify({ kind: "questions", questions: [
+      { id: "modules", title: "模块", question: "包含哪些模块？", multiSelect: true, options: options(8), recommended: 7 },
+      { id: "empty", title: "", question: "只有一个选项", options: options(1) },
+      { id: "modules", question: "重复编号也保留", options: [{ label: "甲" }, { label: "甲" }, "乙"], recommended: 2 },
+    ] });
+    const { questions } = parseResult(`下面是问题：\n${raw}\n请回答。`, false, 7);
+    expect(questions).toHaveLength(2);
+    expect(questions[0].options).toHaveLength(6);
+    expect(questions[0].recommended).toBeNull();
+    expect(questions[0].multiSelect).toBe(true);
+    expect(questions[1]).toMatchObject({ id: "modules_2", title: "重复编号也保留", recommended: 1 });
+    expect(questions[1].options.map((o) => o.label)).toEqual(["甲", "乙"]);
+    expect(roundSchema.safeParse({ questions, answers: [] }).success).toBe(true);
+    expect(() => parseResult(JSON.stringify({ kind: "questions", questions: [{ id: "a", question: "", options: options(3) }] }), false)).toThrow("格式不正确");
   });
   it("rejects malformed output and accepts a ready final prompt", () => {
     expect(() => parseResult("plain result", false)).toThrow();

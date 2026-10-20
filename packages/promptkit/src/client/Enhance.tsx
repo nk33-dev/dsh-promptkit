@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Bookmark,
+  Check,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -141,6 +142,11 @@ export function Enhance({
       card.focus({ preventScroll: true });
     }
   }, [selected, result?.kind, busy, locked]);
+  // 换题或换阶段时回到滚动区顶部；同一题内多选、自填不动滚动位置。
+  useLayoutEffect(() => {
+    const body = root.current?.querySelector<HTMLElement>(".pk-body");
+    if (body) body.scrollTop = 0;
+  }, [questionIndex, result?.kind, !!busy]);
   function busyText({ start, forceFinal, addition }: Run) {
     if (mode === "rewrite")
       return t(!start && addition ? "revising" : "rewriting");
@@ -505,7 +511,7 @@ export function Enhance({
               </IconButton>
             </div>
             {selected.basis && <p className="pk-caption pk-basis">{selected.basis}</p>}
-            {selected.multiSelect && <p className="pk-caption">{t("multipleChoices")}</p>}
+            {selected.multiSelect && <p className="pk-caption pk-multi">{t("multipleChoices")}</p>}
             <div
               role={selected.multiSelect ? "group" : "radiogroup"}
               aria-label={selected.question}
@@ -521,9 +527,7 @@ export function Enhance({
                   disabled={locked}
                   onClick={() => pick(option.label)}
                 >
-                  <span className="pk-option-number" aria-hidden>
-                    {index + 1}
-                  </span>
+                  <OptionMarker multi={selected.multiSelect} index={index} checked={answerValues(answerFor(selected.id)).includes(option.label)} />
                   <span>
                     <strong>{option.label}</strong>
                     {selected.recommended === index && (
@@ -535,9 +539,7 @@ export function Enhance({
               ))}
               {other !== null ? (
                 <div className="pk-option pk-option-editing">
-                  <span className="pk-option-number" aria-hidden>
-                    {selected.options.length + 1}
-                  </span>
+                  <OptionMarker multi={selected.multiSelect} index={selected.options.length} checked={false} />
                   <input
                     aria-label={t("other")}
                     placeholder={t("otherPlaceholder")}
@@ -574,9 +576,7 @@ export function Enhance({
                   disabled={locked}
                   onClick={() => setOther(customAnswer(selected))}
                 >
-                  <span className="pk-option-number" aria-hidden>
-                    {selected.options.length + 1}
-                  </span>
+                  <OptionMarker multi={selected.multiSelect} index={selected.options.length} checked={!!customAnswer(selected)} />
                   <span>
                     <strong>{customAnswer(selected) || t("other")}</strong>
                   </span>
@@ -780,5 +780,19 @@ export function Enhance({
         </footer>
       )}
     </div>
+  );
+}
+/** 单选显示数字键；多选显示复选框，和单选一眼区分开，数字键照样可用。 */
+function OptionMarker({ multi, index, checked }: { multi?: boolean; index: number; checked: boolean }) {
+  if (!multi)
+    return (
+      <span className="pk-option-number" aria-hidden>
+        {index + 1}
+      </span>
+    );
+  return (
+    <span className="pk-check" aria-hidden>
+      {checked && <Check size={13} strokeWidth={3} />}
+    </span>
   );
 }

@@ -329,6 +329,10 @@ describe("clarify needs", () => {
     await start();
     fireEvent.click(await screen.findByRole("checkbox", { name: /Core only/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: /Everything/ }));
+    // 多选用复选框标记，不显示单选的数字键。
+    expect(document.querySelectorAll(".pk-check").length).toBe(3);
+    expect(document.querySelector(".pk-option-number")).toBeNull();
+    expect(screen.getByText(en.multipleChoices)).toBeTruthy();
     expect(generations()).toHaveLength(1);
     expect(screen.queryByRole("button", { name: "选好了" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: en.continueAnswers }));

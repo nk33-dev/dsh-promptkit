@@ -765,32 +765,79 @@ const REWRITE_RULE = readFileSync(new URL("../rules/rewrite.md", import.meta.url
 const GRILL_RULE = readFileSync(new URL("../rules/grill.md", import.meta.url), "utf8").trim();
 //#endregion
 //#region src/host/model.ts
-function parseResult(raw, forceFinal, limit = questionLimit("standard")) {
-	const clean = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-	let parsed;
-	try {
-		parsed = JSON.parse(clean);
-	} catch {
-		throw new Error("模型返回的格式不正确，请重试，已填答案会保留 / Invalid model format; retry without losing answers");
+const formatError = "模型返回的格式不正确，请重试，已填答案会保留 / Invalid model format; retry without losing answers";
+/** 截到字符上限并去掉首尾空白。 */
+function clip(value, max) {
+	return typeof value === "string" ? [...value.trim()].slice(0, max).join("").trim() : "";
+}
+/**
+* 模型偶尔多给选项、推荐越界或个别字段类型不对；逐题规整，只丢弃无法使用的题，
+* 不因为一道题让整批问题失败。
+*/
+function normalizeQuestions(value, limit) {
+	const questions = [];
+	for (const item of Array.isArray(value) ? value : []) {
+		if (questions.length >= limit) break;
+		if (!item || typeof item !== "object") continue;
+		const source = item;
+		const question = clip(source.question, 1200);
+		const options = [], kept = [];
+		(Array.isArray(source.options) ? source.options : []).forEach((option, index) => {
+			const record = option && typeof option === "object" ? option : {};
+			const label = clip(typeof option === "string" ? option : record.label, 160);
+			if (!label || options.length >= 6 || options.some((o) => o.label === label)) return;
+			kept.push(index);
+			options.push({
+				label,
+				description: clip(record.description, 600)
+			});
+		});
+		if (!question || options.length < 2) continue;
+		let id = clip(source.id, 80) || `q${questions.length + 1}`;
+		const base = id;
+		for (let suffix = 2; questions.some((q) => q.id === id); suffix++) id = `${[...base].slice(0, 76).join("")}_${suffix}`;
+		const recommended = kept.indexOf(Number.isInteger(source.recommended) ? source.recommended : -1);
+		const basis = clip(source.basis, 600);
+		questions.push({
+			id,
+			title: clip(source.title, 80) || [...question].slice(0, 80).join(""),
+			question,
+			...basis ? { basis } : {},
+			multiSelect: source.multiSelect === true,
+			options,
+			recommended: recommended >= 0 ? recommended : null
+		});
 	}
-	const questions = z.object({
-		kind: z.literal("questions"),
-		questions: z.array(questionSchema).min(1).max(limit)
-	}).strip().safeParse(parsed);
-	if (questions.success) {
-		if (forceFinal) throw new Error("模型仍在追问，请重试生成 / Model asked again; retry generation");
-		if (new Set(questions.data.questions.map((q) => q.id)).size !== questions.data.questions.length) throw new Error("问题编号重复，请重试 / Duplicate question IDs; retry");
-		return {
-			kind: "questions",
-			questions: questions.data.questions,
-			text: ""
-		};
+	return questions;
+}
+/** 去掉代码围栏；模型在 JSON 前后加了说明文字时，取第一个 { 到最后一个 } 之间的内容。 */
+function jsonObject(raw) {
+	const clean = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+	for (const candidate of [clean, clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1)]) try {
+		const value = JSON.parse(candidate);
+		if (value && typeof value === "object" && !Array.isArray(value)) return value;
+	} catch {}
+	return null;
+}
+function parseResult(raw, forceFinal, limit = questionLimit("standard")) {
+	const parsed = jsonObject(raw);
+	if (!parsed) throw new Error(formatError);
+	if ((typeof parsed.kind === "string" ? parsed.kind : Array.isArray(parsed.questions) ? "questions" : "") === "questions") {
+		const questions = normalizeQuestions(parsed.questions, limit);
+		if (questions.length) {
+			if (forceFinal) throw new Error("模型仍在追问，请重试生成 / Model asked again; retry generation");
+			return {
+				kind: "questions",
+				questions,
+				text: ""
+			};
+		}
 	}
 	const final = z.object({
 		kind: z.enum(["summary", "final"]),
 		text: z.string().trim().min(1).max(4e4)
 	}).strip().safeParse(parsed);
-	if (!final.success || forceFinal && final.data.kind !== "final") throw new Error("模型返回的格式不正确，请重试，已填答案会保留 / Invalid model format; retry without losing answers");
+	if (!final.success || forceFinal && final.data.kind !== "final") throw new Error(formatError);
 	return {
 		kind: final.data.kind,
 		text: final.data.text,

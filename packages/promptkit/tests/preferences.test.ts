@@ -20,7 +20,8 @@ describe("generation preferences", () => {
     expect(limit).toBe(detail === "concise" ? 5 : detail === "standard" ? 10 : 15);
     const questions = Array.from({ length: limit }, (_, index) => ({ ...question, id: String(index) }));
     expect(parseResult(JSON.stringify({ kind: "questions", questions }), false, limit).questions).toHaveLength(limit);
-    expect(() => parseResult(JSON.stringify({ kind: "questions", questions: [...questions, { ...question, id: "extra" }] }), false, limit)).toThrow();
+    // 超出上限的题截掉，不让整批失败。
+    expect(parseResult(JSON.stringify({ kind: "questions", questions: [...questions, { ...question, id: "extra" }] }), false, limit).questions).toHaveLength(limit);
     expect(generationGuidance({ detail, audience: "p4" })).toContain(`最多提出 ${limit} 题`);
     expect(outputBudget(detail)).toBe(detail === "concise" ? 8192 : detail === "standard" ? 12288 : 16384);
   });

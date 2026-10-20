@@ -367,7 +367,7 @@ window.__ModuleLoader__.load({
 		* This source code is licensed under the ISC license.
 		* See the LICENSE file in the root directory of this source tree.
 		*/
-		const __iconData$11 = {
+		const __iconData$12 = {
 			name: "arrow-left-right",
 			size: 24,
 			node: [
@@ -389,8 +389,8 @@ window.__ModuleLoader__.load({
 				}]
 			]
 		};
-		__iconData$11.node;
-		const ArrowLeftRight = createLucideIcon(__iconData$11);
+		__iconData$12.node;
+		const ArrowLeftRight = createLucideIcon(__iconData$12);
 		//#endregion
 		//#region ../../node_modules/.pnpm/lucide-react@1.58.0_@types+react@18.3.31_react@18.3.1/node_modules/lucide-react/dist/esm/icons/bookmark.mjs
 		/**
@@ -399,7 +399,7 @@ window.__ModuleLoader__.load({
 		* This source code is licensed under the ISC license.
 		* See the LICENSE file in the root directory of this source tree.
 		*/
-		const __iconData$10 = {
+		const __iconData$11 = {
 			name: "bookmark",
 			size: 24,
 			node: [["path", {
@@ -407,8 +407,26 @@ window.__ModuleLoader__.load({
 				key: "oz39mx"
 			}]]
 		};
+		__iconData$11.node;
+		const Bookmark = createLucideIcon(__iconData$11);
+		//#endregion
+		//#region ../../node_modules/.pnpm/lucide-react@1.58.0_@types+react@18.3.31_react@18.3.1/node_modules/lucide-react/dist/esm/icons/check.mjs
+		/**
+		* @license lucide-react v1.58.0 - ISC
+		*
+		* This source code is licensed under the ISC license.
+		* See the LICENSE file in the root directory of this source tree.
+		*/
+		const __iconData$10 = {
+			name: "check",
+			size: 24,
+			node: [["path", {
+				d: "M20 6 9 17l-5-5",
+				key: "1gmf2c"
+			}]]
+		};
 		__iconData$10.node;
-		const Bookmark = createLucideIcon(__iconData$10);
+		const Check = createLucideIcon(__iconData$10);
 		//#endregion
 		//#region ../../node_modules/.pnpm/lucide-react@1.58.0_@types+react@18.3.31_react@18.3.1/node_modules/lucide-react/dist/esm/icons/chevron-left.mjs
 		/**
@@ -1022,7 +1040,7 @@ window.__ModuleLoader__.load({
 			addQuestion: "Add question",
 			addQuestionRequest: "Add a question to clarify this decision:",
 			confirm: "Confirm",
-			multipleChoices: "Choose all that apply",
+			multipleChoices: "Choose all that apply, then press › to continue",
 			continueAnswers: "Review answers",
 			defer: "Decide later",
 			deferHint: "Keep this unresolved",
@@ -1174,7 +1192,7 @@ window.__ModuleLoader__.load({
 			addQuestion: "补充问题",
 			addQuestionRequest: "请补充一道问题来确认这个决策：",
 			confirm: "确认",
-			multipleChoices: "可多选",
+			multipleChoices: "可多选，选好后点 › 继续",
 			continueAnswers: "继续检查回答",
 			defer: "暂不决定",
 			deferHint: "保留待定，暂不代选",
@@ -1587,6 +1605,14 @@ window.__ModuleLoader__.load({
 				busy,
 				locked
 			]);
+			(0, react.useLayoutEffect)(() => {
+				const body = root.current?.querySelector(".pk-body");
+				if (body) body.scrollTop = 0;
+			}, [
+				questionIndex,
+				result?.kind,
+				!!busy
+			]);
 			function busyText({ start, forceFinal, addition }) {
 				if (mode === "rewrite") return t(!start && addition ? "revising" : "rewriting");
 				if (forceFinal) return t(result?.kind === "final" ? "revising" : "writing");
@@ -1907,7 +1933,7 @@ window.__ModuleLoader__.load({
 									children: selected.basis
 								}),
 								selected.multiSelect && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-									className: "pk-caption",
+									className: "pk-caption pk-multi",
 									children: t("multipleChoices")
 								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -1921,10 +1947,10 @@ window.__ModuleLoader__.load({
 										"aria-checked": answerValues(answerFor(selected.id)).includes(option.label),
 										disabled: locked,
 										onClick: () => pick(option.label),
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: "pk-option-number",
-											"aria-hidden": true,
-											children: index + 1
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(OptionMarker, {
+											multi: selected.multiSelect,
+											index,
+											checked: answerValues(answerFor(selected.id)).includes(option.label)
 										}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
 											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: option.label }),
 											selected.recommended === index && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -1935,10 +1961,10 @@ window.__ModuleLoader__.load({
 										] })]
 									}, index)), other !== null ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 										className: "pk-option pk-option-editing",
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: "pk-option-number",
-											"aria-hidden": true,
-											children: selected.options.length + 1
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(OptionMarker, {
+											multi: selected.multiSelect,
+											index: selected.options.length,
+											checked: false
 										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 											"aria-label": t("other"),
 											placeholder: t("otherPlaceholder"),
@@ -1967,10 +1993,10 @@ window.__ModuleLoader__.load({
 										"aria-checked": !!customAnswer(selected),
 										disabled: locked,
 										onClick: () => setOther(customAnswer(selected)),
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: "pk-option-number",
-											"aria-hidden": true,
-											children: selected.options.length + 1
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(OptionMarker, {
+											multi: selected.multiSelect,
+											index: selected.options.length,
+											checked: !!customAnswer(selected)
 										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: customAnswer(selected) || t("other") }) })]
 									})]
 								}),
@@ -2261,6 +2287,22 @@ window.__ModuleLoader__.load({
 						]
 					})
 				]
+			});
+		}
+		/** 单选显示数字键；多选显示复选框，和单选一眼区分开，数字键照样可用。 */
+		function OptionMarker({ multi, index, checked }) {
+			if (!multi) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				className: "pk-option-number",
+				"aria-hidden": true,
+				children: index + 1
+			});
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				className: "pk-check",
+				"aria-hidden": true,
+				children: checked && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Check, {
+					size: 13,
+					strokeWidth: 3
+				})
 			});
 		}
 		//#endregion
@@ -3529,6 +3571,9 @@ window.__ModuleLoader__.load({
 .pk-option strong{font-weight:500}
 .pk-option small{display:block;color:var(--dsw-alias-label-secondary);font-size:12px;margin-top:2px}
 .pk-option-number{display:inline-flex;align-items:center;justify-content:center;flex:none;width:22px;height:22px;border-radius:5px;background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);font-size:12px;margin-top:1px}
+.pk-check{display:inline-flex;align-items:center;justify-content:center;flex:none;box-sizing:border-box;width:16px;height:16px;margin:4px 3px 0;border:1.5px solid var(--dsw-alias-label-secondary);border-radius:4px}
+.pk-option[aria-checked=true] .pk-check{border-color:var(--dsw-alias-state-business-primary);background:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-bg-base)}
+.pk-multi{font-weight:500}
 .pk-option-editing{align-items:center;border-color:var(--dsw-alias-state-business-primary);cursor:text}
 .pk-option-editing input{flex:1;min-width:0;font:inherit;color:inherit;background:transparent;border:0;outline:none;padding:2px 0}
 .pk-badge{color:var(--dsw-alias-state-business-primary);font-size:11px;margin-left:6px}
