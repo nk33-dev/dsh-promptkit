@@ -4,7 +4,7 @@ A DeepSeek Harness plugin that turns a rough draft in the composer into a prompt
 
 在输入框旁把草稿整理成可直接发送的提示词；需求不清楚时先问几个关键问题；好用的提示词收藏起来下次用。
 
-Requires DeepSeek Harness **0.2.1-rc.2**. Install from **Plugins → Add plugin → Install a third-party plugin**:
+Requires DeepSeek Harness **0.2.2-rc.1**. Install from **Plugins → Add plugin → Install a third-party plugin**:
 
 ```text
 github:nk33-dev/dsh-promptkit#path:/packages/promptkit

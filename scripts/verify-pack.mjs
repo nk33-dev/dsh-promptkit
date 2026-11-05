@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { verifyClientBundle } from "./verify-client.mjs";
 
 // 版本取自插件 package.json，避免发版后仍校验旧归档。
-const { version } = JSON.parse(await readFile("packages/promptkit/package.json", "utf8"));
+const { version, engines } = JSON.parse(await readFile("packages/promptkit/package.json", "utf8"));
 const path = `dist/dsh-promptkit-${version}.tgz`;
 const archive = await readFile(path),
   tar = gunzipSync(archive),
@@ -40,7 +40,12 @@ if (
 )
   throw new Error("Unexpected package contents");
 const manifest = JSON.parse(files.get("package/package.json").toString("utf8"));
-if (manifest.license !== "MIT" || manifest.engines.dsh !== "0.2.1-rc.2")
+if (
+  manifest.license !== "MIT" ||
+  manifest.version !== version ||
+  manifest.engines.dsh !== engines.dsh ||
+  manifest.engines.node !== engines.node
+)
   throw new Error("Manifest mismatch");
 const client = await verifyClientBundle(
   files.get("package/lib/client.js").toString("utf8"),

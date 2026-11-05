@@ -14,7 +14,7 @@ DeepSeek Harness 插件。在输入框旁把随手写的草稿整理成可直接
 github:nk33-dev/dsh-promptkit#path:/packages/promptkit
 ```
 
-启用后重启 Harness。支持 Harness `0.2.1-rc.2`。仓库已带构建产物，本机不需要 Node 或 pnpm。
+启用后重启 Harness。支持 Harness `0.2.2-rc.1`。仓库已带构建产物，本机不需要 Node 或 pnpm。
 
 ## 功能
 

@@ -152,6 +152,8 @@ describe("Harness stream integration", () => {
     );
     expect(result.text).toBe("complete result");
     expect(stream.mock.calls[0][0]).toMatchObject({
+      sessionId: "test",
+      purpose: "promptkit",
       reasoningEffort: "low",
       maxTokens: 12288,
     });

@@ -983,6 +983,8 @@ async function generate(ctx, settings, request, context, presets, signal, select
 		for await (const chunk of ctx.llm.stream({
 			provider,
 			model,
+			sessionId: request.sessionId,
+			purpose: "promptkit",
 			reasoningEffort,
 			system,
 			messages: conversation.map(({ role, content }) => role === "assistant" ? createAssistantMessage({
@@ -1159,8 +1161,10 @@ var PromptKitService = class extends TypertRemoteService {
 	}
 	async project(sessionId, signal) {
 		if (!sessionId) return null;
-		const cwd = (await this.ctx.sessionController.inspect(sessionId, signal)).meta.cwd;
-		return cwd ? {
+		const projection = await this.ctx.sessionController.projections({ sessionId }, signal);
+		if (projection?.kind !== "sequenced") return null;
+		const cwd = projection.values.workingDirectory;
+		return typeof cwd === "string" && cwd ? {
 			hostId: this.store.hostId,
 			workingDirectory: cwd
 		} : null;

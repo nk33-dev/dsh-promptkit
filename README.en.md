@@ -14,7 +14,7 @@ In Harness, open **Plugins → Add plugin** (arrow) → **Install a third-party 
 github:nk33-dev/dsh-promptkit#path:/packages/promptkit
 ```
 
-Enable the plugin and restart Harness. Requires Harness `0.2.1-rc.2`. The repository ships the built output, so Node and pnpm are not required.
+Enable the plugin and restart Harness. Requires Harness `0.2.2-rc.1`. The repository ships the built output, so Node and pnpm are not required.
 
 ## Features
 

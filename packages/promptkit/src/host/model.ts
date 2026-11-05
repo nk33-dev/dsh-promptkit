@@ -19,6 +19,12 @@ import { generationGuidance, questionLimit, outputBudget } from "../shared/prefe
 import { REWRITE_RULE, GRILL_RULE } from "../rules.ts";
 import { z } from "zod";
 
+declare module "@deepseek-ai/dsh-llm/types" {
+  interface LlmRequestPurposeMap {
+    promptkit: true;
+  }
+}
+
 type ConversationMessage = { role: "user" | "assistant"; content: string };
 
 const formatError =
@@ -349,6 +355,8 @@ export async function generate(
     for await (const chunk of ctx.llm.stream({
       provider,
       model,
+      sessionId: request.sessionId as Parameters<typeof ctx.llm.stream>[0]["sessionId"],
+      purpose: "promptkit",
       reasoningEffort,
       system,
       messages: conversation.map(({ role, content }) =>

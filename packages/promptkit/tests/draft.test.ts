@@ -141,17 +141,19 @@ describe("guarded composer writes", () => {
     ).toBe(true);
     expect(insertText.mock.calls.map((v) => v[1].draftRev)).toEqual([1, 2]);
   });
-  it("refuses writes while the composer is submitting", () => {
-    const state = input({ phase: "submitting" });
-    expect(
-      writeDraft(
-        {} as InputActions,
-        () => state,
-        captureDraft("one", state),
-        "one",
-        "result",
-        "append",
-      ),
-    ).toBe(false);
-  });
+  it.each(["adjudicating", "claimed", "submitting", "sending"] as const)(
+    "refuses writes while the composer is %s", (phase) => {
+      const state = input({ phase });
+      expect(
+        writeDraft(
+          {} as InputActions,
+          () => state,
+          captureDraft("one", state),
+          "one",
+          "result",
+          "append",
+        ),
+      ).toBe(false);
+    },
+  );
 });

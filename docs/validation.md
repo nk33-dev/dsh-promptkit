@@ -1,6 +1,18 @@
 # 验证记录
 
-只记录当前版本的验证状态与限制；历次发布说明见 GitHub Releases。
+记录验证状态与限制；历次发布说明见 GitHub Releases。
+
+## 0.1.6
+
+2026-11-05，Windows 11，Node.js `24.16.0`，Harness SDK `0.2.2-rc.1`，Cordis `4.1.0`。
+
+- `pnpm install --frozen-lockfile` 与 `pnpm peers check` 通过。
+- `pnpm check`：Host 与 Client 类型检查通过。
+- `pnpm test`：12 个测试文件、152 项通过。
+- `pnpm pack:plugin`：构建、客户端入口注册与发布包清单校验通过。
+- 新增会话投影回归：当前目录、项目变更检查、空会话、缺失字段、迁移缓存；宿主模型请求包含会话 ID 与用途。
+- 输入框保护覆盖 `sending`、`adjudicating`、`claimed`、`submitting`。
+- 本轮未启动真实 Harness，未重跑安装升级和真实模型调用；以下原生与模型记录来自 0.1.5。
 
 ## 0.1.5
 

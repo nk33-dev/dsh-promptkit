@@ -1,5 +1,10 @@
 import type { Context } from "@deepseek-ai/cordis";
 import type { Settings, GenerationRequest, GenerationResult, ContextReport, Preset } from "../shared/types.ts";
+declare module "@deepseek-ai/dsh-llm/types" {
+    interface LlmRequestPurposeMap {
+        promptkit: true;
+    }
+}
 type ConversationMessage = {
     role: "user" | "assistant";
     content: string;

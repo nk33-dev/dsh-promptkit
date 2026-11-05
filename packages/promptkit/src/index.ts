@@ -96,12 +96,15 @@ export class PromptKitService extends TypertRemoteService {
     signal: AbortSignal,
   ): Promise<Project | null> {
     if (!sessionId) return null;
-    const inspection = await this.ctx.sessionController.inspect(
-      sessionId as Parameters<typeof this.ctx.sessionController.inspect>[0],
+    const projection = await this.ctx.sessionController.projections(
+      { sessionId: sessionId as Parameters<typeof this.ctx.sessionController.projections>[0]["sessionId"] },
       signal,
     );
-    const cwd = inspection.meta.cwd;
-    return cwd ? { hostId: this.store.hostId, workingDirectory: cwd } : null;
+    if (projection?.kind !== "sequenced") return null;
+    const cwd = projection.values.workingDirectory;
+    return typeof cwd === "string" && cwd
+      ? { hostId: this.store.hostId, workingDirectory: cwd }
+      : null;
   }
   private async dispatch(
     action: string,
