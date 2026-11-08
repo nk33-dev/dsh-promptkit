@@ -15,7 +15,7 @@ export declare function useDraft(api: Api, t: T, { sessionId, input, inputAction
     guard: DraftGuard | null;
     stale: boolean;
     reset: (signal?: AbortSignal, allowEmpty?: boolean) => Promise<DraftGuard>;
-    useText: (text: string, how: "copy" | "replace" | "append", override?: DraftGuard) => Promise<string>;
+    useText: (text: string, how: "copy" | "replace" | "append", override?: DraftGuard, signal?: AbortSignal) => Promise<string>;
     original: () => string;
     current: import("react").MutableRefObject<{
         sessionId: string;

@@ -267,12 +267,14 @@ export function useData<T>(
 ) {
   const [data, setData] = useState<T | null>(null),
     [error, setError] = useState(""),
+    [loading, setLoading] = useState(false),
     [version, reload] = useState(0),
     key = JSON.stringify(payload);
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
     setError("");
+    setLoading(true);
     api
       .call<T>(action, JSON.parse(key), controller.signal)
       .then((value) => {
@@ -280,8 +282,11 @@ export function useData<T>(
       })
       .catch((error) => {
         if (!controller.signal.aborted) setError(error.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
   }, [api, action, key, version, enabled]);
-  return { data, error, reload: () => reload((v) => v + 1) };
+  return { data, error, loading, reload: () => reload((v) => v + 1) };
 }

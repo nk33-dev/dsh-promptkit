@@ -1,8 +1,51 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createServer } from "node:http";
 import { independentRequest } from "../src/host/model.ts";
 import { defaultSettings } from "../src/shared/defaults.ts";
 describe("independent model HTTP integration", () => {
+  const options = { ...defaultSettings(), baseUrl: "https://example.test/v1", model: "test", protocol: "chat_completions" as const };
+  const invoke = (response: Response, signal = new AbortController().signal) =>
+    independentRequest(options, "synthetic-secret", "system", "draft", signal, async () => response);
+
+  it("bounds declared and chunked bytes before buffering the full response", async () => {
+    const cancel = vi.fn();
+    const oversized = new Response(new ReadableStream({ cancel }), { headers: { "content-length": String(2 * 1024 * 1024 + 1) } });
+    await expect(invoke(oversized)).rejects.toThrow("2 MiB");
+    expect(cancel).toHaveBeenCalledOnce();
+    const cancelFailure = new Response(new ReadableStream({
+      cancel() { throw new Error("synthetic-secret"); },
+    }), { headers: { "content-length": String(2 * 1024 * 1024 + 1) } });
+    await expect(invoke(cancelFailure)).rejects.toThrow("2 MiB");
+    const chunk = new TextEncoder().encode("中".repeat(400000));
+    let sent = 0;
+    const stop = vi.fn();
+    const streamed = new Response(new ReadableStream({
+      pull(controller) { ++sent; controller.enqueue(chunk); },
+      cancel: stop,
+    }, { highWaterMark: 0 }));
+    await expect(invoke(streamed)).rejects.toThrow("2 MiB");
+    expect(sent).toBe(2);
+    expect(stop).toHaveBeenCalledOnce();
+  });
+
+  it("preserves split UTF-8 and reports interrupted, invalid and cancelled bodies", async () => {
+    const bytes = new TextEncoder().encode(JSON.stringify({ choices: [{ message: { content: "中文结果" } }] }));
+    const valid = new Response(new ReadableStream({
+      start(controller) { for (const byte of bytes) controller.enqueue(new Uint8Array([byte])); controller.close(); },
+    }));
+    expect((await invoke(valid)).text).toBe("中文结果");
+    const failed = new Response(new ReadableStream({
+      pull(controller) { controller.error(new Error("synthetic-secret")); },
+    }));
+    await expect(invoke(failed)).rejects.toThrow("读取中断");
+    await expect(invoke(new Response(new Uint8Array([255])))).rejects.toThrow("UTF-8");
+    const controller = new AbortController(), cancel = vi.fn();
+    const pending = invoke(new Response(new ReadableStream({ cancel })), controller.signal);
+    controller.abort(new DOMException("cancelled", "AbortError"));
+    await expect(pending).rejects.toThrow("cancelled");
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
   it("sends all three wire protocols over real local HTTP", async () => {
     const seen: { url: string; auth: string; body: Record<string, unknown> }[] =
       [];

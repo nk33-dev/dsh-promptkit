@@ -66,7 +66,7 @@ export function Library({
     ),
     [tagText, setTagText] = useState(memory.tagText);
   const builtIn = (BUILT_IN as readonly string[]).includes(filter);
-  const { data, error, reload } = useData<FavoriteList>(api, "favorites.list", {
+  const { data, error, loading, reload } = useData<FavoriteList>(api, "favorites.list", {
     sessionId: composer.sessionId || "",
     query: search,
     scope: builtIn ? filter : "all",
@@ -74,6 +74,16 @@ export function Library({
     sort: "manual",
     limit,
   });
+  const detail = useRef<AbortController | null>(null);
+  useEffect(() => () => {
+    detail.current?.abort();
+  }, [api, composer.sessionId, search, filter, limit]);
+  function detailRequest() {
+    detail.current?.abort();
+    const controller = new AbortController();
+    detail.current = controller;
+    return controller.signal;
+  }
   // 拖拽后先在本地排好，等宿主确认后再以列表结果为准。
   const [items, setItems] = useState<FavoriteSummary[]>([]);
   useEffect(() => setItems(data?.items ?? []), [data]);
@@ -96,9 +106,15 @@ export function Library({
     void perform(() => edit(editId));
   }, [editId]);
   async function edit(id: string) {
-    const item = await api.call<Favorite>("favorites.get", { id });
-    setEditing(item);
-    setTagText(item.tags.join(api.language === "en" ? ", " : "，"));
+    const signal = detailRequest();
+    try {
+      const item = await api.call<Favorite>("favorites.get", { id }, signal);
+      if (signal.aborted) return;
+      setEditing(item);
+      setTagText(item.tags.join(api.language === "en" ? ", " : "，"));
+    } catch (error) {
+      if (!signal.aborted) throw error;
+    }
   }
   async function save() {
     if (!editing || !data) return;
@@ -137,31 +153,41 @@ export function Library({
     });
   }
   async function use(item: FavoriteSummary, how: "copy" | "replace" | "append") {
+    if (loading) return;
     await perform(async () => {
-      const { body } = await api.call<Favorite>("favorites.get", {
-        id: item.id,
-      });
-      const live = writer.current.current;
-      const before = live.input?.draft ?? "";
-      if (how === "replace" && live.input && !replacementEdits(live.input, body))
-        throw new Error(t("unsafeReplace"));
-      const message = await writer.useText(
-        body,
-        how,
-        live.input && captureDraft(live.sessionId, live.input),
-      );
-      void api.call("favorites.touch", { id: item.id }).catch(() => {});
-      if (how === "copy") notify(message);
-      else
-        onWrite?.(
+      const signal = detailRequest();
+      try {
+        const live = writer.current.current;
+        const guard = live.input && captureDraft(live.sessionId, live.input);
+        const before = live.input?.draft ?? "";
+        const { body } = await api.call<Favorite>("favorites.get", {
+          id: item.id,
+        }, signal);
+        if (signal.aborted) return;
+        if (how === "replace" && live.input && !replacementEdits(live.input, body))
+          throw new Error(t("unsafeReplace"));
+        const message = await writer.useText(
+          body,
           how,
-          before,
-          composer.inputActions!.captureInsertion().draftRev,
+          guard,
+          signal,
         );
+        if (signal.aborted) return;
+        void api.call("favorites.touch", { id: item.id }).catch(() => {});
+        if (how === "copy") notify(message);
+        else
+          onWrite?.(
+            how,
+            before,
+            composer.inputActions!.captureInsertion().draftRev,
+          );
+      } catch (error) {
+        if (!signal.aborted) throw error;
+      }
     });
   }
   async function remove(item: FavoriteSummary) {
-    if (!data) return;
+    if (!data || loading) return;
     await perform(async () => {
       const removed = await api.call<{ favorite: Favorite; index: number }>(
         "favorites.delete",
@@ -179,7 +205,7 @@ export function Library({
     });
   }
   async function move(id: string, target: string) {
-    if (!data || id === target) return;
+    if (!data || loading || id === target) return;
     // 放到目标所在位置：往下拖落在目标之后，往上拖落在目标之前。
     const next = [...items],
       to = next.findIndex((v) => v.id === target),
@@ -273,7 +299,7 @@ export function Library({
           onClose={onClose}
         />
       )}
-      <div className="pk-body">
+      <div className="pk-body" aria-busy={loading}>
         <input
           className="pk-input"
           type="search"

@@ -898,7 +898,8 @@ window.__ModuleLoader__.load({
 				setGuard(next);
 				return next;
 			}
-			async function useText(text, how, override) {
+			async function useText(text, how, override, signal) {
+				signal?.throwIfAborted();
 				const guard = override ?? state;
 				if (how === "copy") {
 					await navigator.clipboard.writeText(text);
@@ -908,7 +909,8 @@ window.__ModuleLoader__.load({
 				if (!await api.call("project.check", {
 					sessionId: guard.sessionId,
 					project: origin.current
-				})) throw new Error(t("writeFailed"));
+				}, signal)) throw new Error(t("writeFailed"));
+				signal?.throwIfAborted();
 				if (!writeDraft(inputActions, () => current.current.input, guard, current.current.sessionId, text, how)) throw new Error(t("writeFailed"));
 				return t(how === "replace" ? "replaced" : "appended");
 			}
@@ -1517,15 +1519,18 @@ window.__ModuleLoader__.load({
 			});
 		}
 		function useData(api, action, payload, enabled = true) {
-			const [data, setData] = (0, react.useState)(null), [error, setError] = (0, react.useState)(""), [version, reload] = (0, react.useState)(0), key = JSON.stringify(payload);
+			const [data, setData] = (0, react.useState)(null), [error, setError] = (0, react.useState)(""), [loading, setLoading] = (0, react.useState)(false), [version, reload] = (0, react.useState)(0), key = JSON.stringify(payload);
 			(0, react.useEffect)(() => {
 				if (!enabled) return;
 				const controller = new AbortController();
 				setError("");
+				setLoading(true);
 				api.call(action, JSON.parse(key), controller.signal).then((value) => {
 					if (!controller.signal.aborted) setData(value);
 				}).catch((error) => {
 					if (!controller.signal.aborted) setError(error.message);
+				}).finally(() => {
+					if (!controller.signal.aborted) setLoading(false);
 				});
 				return () => controller.abort();
 			}, [
@@ -1538,6 +1543,7 @@ window.__ModuleLoader__.load({
 			return {
 				data,
 				error,
+				loading,
 				reload: () => reload((v) => v + 1)
 			};
 		}
@@ -2324,7 +2330,7 @@ window.__ModuleLoader__.load({
 			const memory = (0, react.useRef)(libraryState(api, composer.sessionId || "", management)).current;
 			const [search, setSearch] = (0, react.useState)(memory.search), [filter, setFilter] = (0, react.useState)(memory.filter), [limit, setLimit] = (0, react.useState)(memory.limit), [editing, setEditing] = (0, react.useState)(editId ? null : memory.editing), [tagText, setTagText] = (0, react.useState)(memory.tagText);
 			const builtIn = BUILT_IN.includes(filter);
-			const { data, error, reload } = useData(api, "favorites.list", {
+			const { data, error, loading, reload } = useData(api, "favorites.list", {
 				sessionId: composer.sessionId || "",
 				query: search,
 				scope: builtIn ? filter : "all",
@@ -2332,6 +2338,22 @@ window.__ModuleLoader__.load({
 				sort: "manual",
 				limit
 			});
+			const detail = (0, react.useRef)(null);
+			(0, react.useEffect)(() => () => {
+				detail.current?.abort();
+			}, [
+				api,
+				composer.sessionId,
+				search,
+				filter,
+				limit
+			]);
+			function detailRequest() {
+				detail.current?.abort();
+				const controller = new AbortController();
+				detail.current = controller;
+				return controller.signal;
+			}
 			const [items, setItems] = (0, react.useState)([]);
 			(0, react.useEffect)(() => setItems(data?.items ?? []), [data]);
 			(0, react.useEffect)(() => {
@@ -2351,9 +2373,15 @@ window.__ModuleLoader__.load({
 				perform(() => edit(editId));
 			}, [editId]);
 			async function edit(id) {
-				const item = await api.call("favorites.get", { id });
-				setEditing(item);
-				setTagText(item.tags.join(api.language === "en" ? ", " : "，"));
+				const signal = detailRequest();
+				try {
+					const item = await api.call("favorites.get", { id }, signal);
+					if (signal.aborted) return;
+					setEditing(item);
+					setTagText(item.tags.join(api.language === "en" ? ", " : "，"));
+				} catch (error) {
+					if (!signal.aborted) throw error;
+				}
 			}
 			async function save() {
 				if (!editing || !data) return;
@@ -2389,19 +2417,28 @@ window.__ModuleLoader__.load({
 				});
 			}
 			async function use(item, how) {
+				if (loading) return;
 				await perform(async () => {
-					const { body } = await api.call("favorites.get", { id: item.id });
-					const live = writer.current.current;
-					const before = live.input?.draft ?? "";
-					if (how === "replace" && live.input && !replacementEdits(live.input, body)) throw new Error(t("unsafeReplace"));
-					const message = await writer.useText(body, how, live.input && captureDraft(live.sessionId, live.input));
-					api.call("favorites.touch", { id: item.id }).catch(() => {});
-					if (how === "copy") notify(message);
-					else onWrite?.(how, before, composer.inputActions.captureInsertion().draftRev);
+					const signal = detailRequest();
+					try {
+						const live = writer.current.current;
+						const guard = live.input && captureDraft(live.sessionId, live.input);
+						const before = live.input?.draft ?? "";
+						const { body } = await api.call("favorites.get", { id: item.id }, signal);
+						if (signal.aborted) return;
+						if (how === "replace" && live.input && !replacementEdits(live.input, body)) throw new Error(t("unsafeReplace"));
+						const message = await writer.useText(body, how, guard, signal);
+						if (signal.aborted) return;
+						api.call("favorites.touch", { id: item.id }).catch(() => {});
+						if (how === "copy") notify(message);
+						else onWrite?.(how, before, composer.inputActions.captureInsertion().draftRev);
+					} catch (error) {
+						if (!signal.aborted) throw error;
+					}
 				});
 			}
 			async function remove(item) {
-				if (!data) return;
+				if (!data || loading) return;
 				await perform(async () => {
 					const removed = await api.call("favorites.delete", {
 						id: item.id,
@@ -2418,7 +2455,7 @@ window.__ModuleLoader__.load({
 				});
 			}
 			async function move(id, target) {
-				if (!data || id === target) return;
+				if (!data || loading || id === target) return;
 				const next = [...items], to = next.findIndex((v) => v.id === target), [moved] = next.splice(next.findIndex((v) => v.id === id), 1);
 				next.splice(to, 0, moved);
 				setItems(next);
@@ -2530,6 +2567,7 @@ window.__ModuleLoader__.load({
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: "pk-body",
+						"aria-busy": loading,
 						children: [
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 								className: "pk-input",

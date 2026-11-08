@@ -59,7 +59,9 @@ export function useDraft(
     text: string,
     how: "copy" | "replace" | "append",
     override?: DraftGuard,
+    signal?: AbortSignal,
   ) {
+    signal?.throwIfAborted();
     const guard = override ?? state;
     if (how === "copy") {
       await navigator.clipboard.writeText(text);
@@ -71,9 +73,10 @@ export function useDraft(
       !(await api.call<boolean>("project.check", {
         sessionId: guard.sessionId,
         project: origin.current,
-      }))
+      }, signal))
     )
       throw new Error(t("writeFailed"));
+    signal?.throwIfAborted();
     if (
       !writeDraft(
         inputActions,

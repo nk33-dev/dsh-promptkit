@@ -731,6 +731,90 @@ describe("saved prompts", () => {
     fireEvent.click(await screen.findByRole("button", { name: en.library }));
     return screen.findByRole("button", { name: /^Saved review/ });
   }
+  it("keeps the filter shell, focus and scroll while ignoring late filter results", async () => {
+    const { call } = setup();
+    await openLibrary();
+    const original = call.getMockImplementation()!;
+    const pending: Array<{ resolve: (value: unknown) => void; signal?: AbortSignal }> = [];
+    call.mockImplementation((action, payload, signal) => action === "favorites.list"
+      ? new Promise(resolve => pending.push({ resolve, signal }))
+      : original(action, payload, signal));
+    const body = document.querySelector(".pk-library .pk-body") as HTMLElement;
+    const search = screen.getByRole("searchbox");
+    const global = screen.getByRole("button", { name: en.global });
+    body.scrollTop = 55;
+    global.focus();
+    fireEvent.click(global);
+    expect(screen.getByRole("searchbox")).toBe(search);
+    expect(document.querySelector(".pk-library .pk-body")).toBe(body);
+    expect(document.activeElement).toBe(global);
+    expect(screen.getByRole("button", { name: /^Saved review/ })).toBeTruthy();
+    expect(body.getAttribute("aria-busy")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: en.all }));
+    expect(pending[0].signal?.aborted).toBe(true);
+    const list = { items: [{ ...saved, excerpt: saved.body }], revision: 0, total: 1, tags: ["review"], project: null };
+    await act(async () => pending[1].resolve(list));
+    await act(async () => pending[0].resolve({ ...list, items: [], total: 0 }));
+    expect(screen.getByRole("button", { name: /^Saved review/ })).toBeTruthy();
+    expect(screen.getByRole("searchbox")).toBe(search);
+    expect(body.scrollTop).toBe(55);
+    expect(body.getAttribute("aria-busy")).toBe("false");
+  });
+  it("does not open a late editor after closing the library", async () => {
+    const { call } = setup();
+    await openLibrary();
+    const original = call.getMockImplementation()!;
+    let resolve!: (value: unknown) => void;
+    let signal: AbortSignal | undefined;
+    call.mockImplementation((action, payload, cancellation) => {
+      if (action !== "favorites.get") return original(action, payload, cancellation);
+      signal = cancellation;
+      return new Promise(done => { resolve = done; });
+    });
+    const row = screen.getByRole("button", { name: /^Saved review/ }).parentElement!;
+    fireEvent.click(within(row).getByRole("button", { name: en.edit }));
+    fireEvent.click(screen.getByRole("button", { name: en.close }));
+    expect(signal?.aborted).toBe(true);
+    await act(async () => resolve(saved));
+    fireEvent.click(screen.getByRole("button", { name: en.library }));
+    await screen.findByRole("searchbox");
+    expect(screen.queryByLabelText(en.title)).toBeNull();
+  });
+  it("keeps a draft edited while the favorite body is loading", async () => {
+    const { call, props, rerender } = setup();
+    await openLibrary();
+    const original = call.getMockImplementation()!;
+    let resolve!: (value: unknown) => void;
+    call.mockImplementation((action, payload, signal) => action === "favorites.get"
+      ? new Promise(done => { resolve = done; })
+      : original(action, payload, signal));
+    const row = screen.getByRole("button", { name: /^Saved review/ }).parentElement!;
+    fireEvent.click(within(row).getByRole("button", { name: en.replace }));
+    rerender(<App {...props} input={{ ...input, draft: "New manual draft", draftRev: 2 }} />);
+    await act(async () => resolve(saved));
+    expect(props.inputActions.insertText).not.toHaveBeenCalled();
+    expect(call.mock.calls.some(([action]) => action === "favorites.touch")).toBe(false);
+  });
+  it("does not write after closing during project verification", async () => {
+    const { call, props } = setup();
+    await openLibrary();
+    const original = call.getMockImplementation()!;
+    let resolve!: (value: unknown) => void;
+    let signal: AbortSignal | undefined;
+    call.mockImplementation((action, payload, cancellation) => {
+      if (action !== "project.check") return original(action, payload, cancellation);
+      signal = cancellation;
+      return new Promise(done => { resolve = done; });
+    });
+    const row = screen.getByRole("button", { name: /^Saved review/ }).parentElement!;
+    fireEvent.click(within(row).getByRole("button", { name: en.replace }));
+    await waitFor(() => expect(signal).toBeDefined());
+    fireEvent.click(screen.getByRole("button", { name: en.close }));
+    expect(signal?.aborted).toBe(true);
+    await act(async () => resolve(true));
+    expect(props.inputActions.insertText).not.toHaveBeenCalled();
+    expect(call.mock.calls.some(([action]) => action === "favorites.touch")).toBe(false);
+  });
   it("keeps an empty search to a caption and restores results when the query is cleared", async () => {
     setup();
     await openLibrary();
@@ -937,6 +1021,6 @@ describe("management", () => {
     expect(call).toHaveBeenCalledWith("project.check", {
       sessionId: "test",
       project: oldProject,
-    });
+    }, undefined);
   });
 });

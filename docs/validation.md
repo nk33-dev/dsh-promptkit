@@ -1,48 +1,30 @@
 # 验证记录
 
-记录验证状态与限制；历次发布说明见 GitHub Releases。
+历次发布说明见 GitHub Releases。这里只记当前版本的验证状态和已知限制。
 
 ## 0.1.6
 
-2026-11-05，Windows 11，Node.js `24.16.0`，Harness SDK `0.2.2-rc.1`，Cordis `4.1.0`。
+2026-11-05。Windows 11，Node.js `24.16.0`，Harness SDK `0.2.2-rc.1`，Cordis `4.1.0`。
 
-- `pnpm install --frozen-lockfile` 与 `pnpm peers check` 通过。
-- `pnpm check`：Host 与 Client 类型检查通过。
-- `pnpm test`：12 个测试文件、152 项通过。
-- `pnpm pack:plugin`：构建、客户端入口注册与发布包清单校验通过。
-- 新增会话投影回归：当前目录、项目变更检查、空会话、缺失字段、迁移缓存；宿主模型请求包含会话 ID 与用途。
-- 输入框保护覆盖 `sending`、`adjudicating`、`claimed`、`submitting`。
-- 本轮未启动真实 Harness，未重跑安装升级和真实模型调用；以下原生与模型记录来自 0.1.5。
+### 自动检查
 
-## 0.1.5
+| 项目 | 结果 |
+| --- | --- |
+| `pnpm install --frozen-lockfile`、`pnpm peers check` | 通过 |
+| `pnpm check` | Host 与 Client 类型检查通过 |
+| `pnpm test` | 12 个文件、152 项通过 |
+| `pnpm pack:plugin` | 构建、客户端入口注册、发布包清单校验通过 |
 
-2026-10-19，Windows 11，Node.js 24，Harness `0.2.1-rc.2`。
+测试覆盖：生成与追问流程、问题规整、深度与画像的规则选择、多选与推荐排序、补问与重述、改答案未改动时恢复上次结果、结果写回与撤销、草稿与项目变化、收藏排序与撤销、导入校验、三种协议与自动回退、凭据与敏感内容过滤。输入框保护覆盖 `sending`、`adjudicating`、`claimed`、`submitting`。CI 在 Windows、Ubuntu、macOS 上跑同样的检查，并确认提交的 `lib/` 与源码一致。
 
-**自动检查**
+### 未验证
 
-- `pnpm check`：Host 与 Client 的 TypeScript 检查通过。
-- `pnpm test`：11 个测试文件、142 项通过。覆盖生成与追问流程、问题规整（多余选项、越界推荐、重复编号、夹带说明文字）、深度与画像的规则选择、多选与推荐排序、补问与重述、改答案未改动时恢复上次结果、结果写回与撤销、草稿与项目变化、收藏排序与撤销、导入校验、三种协议与自动回退、凭据和敏感内容过滤。
-- `pnpm pack:plugin`：重新构建并打包，再从 tgz 中取出客户端，验证模块工厂、入口注册、宿主模块白名单、规则、许可及私密开发文件排除。
-- CI 在 Windows、Ubuntu、macOS 上执行同样的检查，并确认已提交的 `lib/` 与源码构建结果一致。
+- 本轮没启动真实 Harness，没重跑安装升级和真实模型调用。
+- macOS、Linux 上的 Harness 没测。
+- 没通过插件管理器走完整的安装、升级、停用与恢复。
+- 取消、切会话、改稿与多附件的组合没穷举；中文输入法候选窗没穷举。
+- 宿主安装器对同版本归档重装可能报依赖变更错误，升级时用新的补丁版本。
 
-**真实模型**
+### 历史记录
 
-使用 Harness 已配置的 `deepseek-flash`，按八画像、三深度、两模式抽取部分组合，覆盖新建系统、项目审查、修复、写作、翻译与解释等任务，以及看不懂、自填、补充问题、改答案、直接生成、二次改进等多轮操作，并逐条人工评分。请求只包含草稿与用户操作，不附带参考答案。图书管理系统 P4 详细档的增强与需求对齐稳定在 90 分左右；增强成稿不再输出问卷，只有用户能给的事实留成空位；微调保持草稿篇幅。早先偶发的“格式不正确”来自个别题选项超过 6 个导致整批被拒；现已改为逐题规整，2026-10-20 在 Harness 中重跑图书管理系统需求对齐，多选题 7 个候选正常显示。评估集见 [prompt-evaluation-cases.json](prompt-evaluation-cases.json)，不随请求发送。
-
-**界面**
-
-在 Edge 中运行实际 `App/Enhance/Library` 组件并回放采集输出，检查 400px 与 1000–1200px 宽度、亮暗主题、键盘导航、多选复选框与滚动位置、「暂不决定 / 你来决定」固定在选项下方、末题禁用、空草稿禁用和收藏操作。README 截图来自这套夹具，不是 Harness 窗口截图。
-
-## 安装
-
-`pnpm` 从 `github:nk33-dev/dsh-promptkit#path:/packages/promptkit` 安装成功，产物含 `lib/client.js`、`lib/index.js`、`lib/remote.js` 和类型声明，安装后的客户端通过模块工厂、入口注册和宿主模块白名单检查。仓库已提交构建产物，安装时不需要构建。
-
-当前版本已在真实 Harness 中加载，输入框旁的两个入口、模式菜单和浮动卡片可用，页面无错误提示。完整问答、写回和收藏操作主要由组件测试与浏览器夹具覆盖，尚未在 Harness 中逐项重跑。
-
-## 限制
-
-- 未实测 macOS、Linux 上的 Harness。
-- 未通过 Harness 插件管理器重走完整的安装、升级、停用与恢复；需要时用 `scripts/native-quick.mjs`、`scripts/native-lifecycle.mjs` 重新验收（脚本基于旧界面，需按当前界面调整）。
-- 模型质量与外部服务稳定性不在自动检查范围内；夹具使用确定性响应，未抽到的画像与深度组合没有真实调用。
-- 取消、切会话、改稿与多个附件的组合未穷举；中文输入法候选窗未穷举。
-- 宿主安装器对同版本归档重装可能报依赖变更错误，升级时使用新的补丁版本。
+0.1.5 做过真实模型评估和界面检查，记录在 GitHub Releases。人工回归用例在 [prompt-evaluation-cases.json](prompt-evaluation-cases.json)，不随请求发送。README 截图来自浏览器夹具，不是 Harness 窗口截图。

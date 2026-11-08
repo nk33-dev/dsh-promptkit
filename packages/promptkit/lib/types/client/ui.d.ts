@@ -67,5 +67,6 @@ export declare function ErrorBar({ error, t, onRetry, }: {
 export declare function useData<T>(api: Api, action: string, payload: unknown, enabled?: boolean): {
     data: T | null;
     error: string;
+    loading: boolean;
     reload: () => void;
 };

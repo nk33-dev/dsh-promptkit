@@ -26,6 +26,51 @@ declare module "@deepseek-ai/dsh-llm/types" {
 }
 
 type ConversationMessage = { role: "user" | "assistant"; content: string };
+const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+
+async function readModelResponse(response: Response, signal: AbortSignal): Promise<string> {
+  const tooLarge = () => new Error("模型响应超过 2 MiB，请缩短要求后重试 / Model response exceeds 2 MiB; shorten your request and retry");
+  const length = Number(response.headers.get("content-length"));
+  if (Number.isFinite(length) && length > MAX_RESPONSE_BYTES) {
+    await response.body?.cancel().catch(() => {});
+    throw tooLarge();
+  }
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const abort = () => { void reader.cancel().catch(() => {}); };
+  signal.addEventListener("abort", abort, { once: true });
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  let bytes = 0;
+  const parts: string[] = [];
+  try {
+    signal.throwIfAborted();
+    while (true) {
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+      try {
+        chunk = await reader.read();
+      } catch {
+        signal.throwIfAborted();
+        throw new Error("模型响应读取中断，请重试 / Model response was interrupted; retry");
+      }
+      signal.throwIfAborted();
+      if (chunk.done) break;
+      bytes += chunk.value.byteLength;
+      if (bytes > MAX_RESPONSE_BYTES) throw tooLarge();
+      parts.push(decoder.decode(chunk.value, { stream: true }));
+    }
+    parts.push(decoder.decode());
+    return parts.join("");
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    signal.throwIfAborted();
+    if (error instanceof TypeError)
+      throw new Error("模型响应不是有效 UTF-8，请重试 / Model response is not valid UTF-8; retry");
+    throw error;
+  } finally {
+    signal.removeEventListener("abort", abort);
+    reader.releaseLock();
+  }
+}
 
 const formatError =
   "模型返回的格式不正确，请重试，已填答案会保留 / Invalid model format; retry without losing answers";
@@ -222,9 +267,7 @@ export async function independentRequest(
         `模型请求失败 / Model request failed (HTTP ${response.status})`,
       );
     }
-    const raw = await response.text();
-    if (raw.length > 2000000)
-      throw new Error("模型响应过大 / Model response too large");
+    const raw = await readModelResponse(response, signal);
     let data;
     try {
       data = JSON.parse(raw);
