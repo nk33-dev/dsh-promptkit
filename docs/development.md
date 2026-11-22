@@ -2,7 +2,7 @@
 
 TypeScript、React 18、Cordis；pnpm、tsdown、Vitest。Host 使用宿主存储域、凭据服务、模型目录与调用服务；Client 注册输入框和设置槽位，沿用 Harness 主题变量。
 
-0.1.6 使用 Harness `0.2.2-rc.1` SDK、Cordis `4.1.0` 和 Node.js `24.9+`。
+0.1.7 使用 Harness `0.2.2-rc.5` SDK、Cordis `4.1.0`、Zod `4.6.6` 和 Node.js `24.9+`。
 项目目录从 `sessionController.projections({ sessionId }, signal)` 的
 `values.workingDirectory` 读取，只接受 `sequenced` 结果；缺失或需迁移的会话返回空项目。
 宿主模型请求携带 `sessionId` 和 `purpose: "promptkit"`，供提供商的会话路由与动态请求头使用。

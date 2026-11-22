@@ -1,6 +1,6 @@
 {
   "name": "@nk33-dev/dsh-promptkit",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Turn rough ideas into prompts that work in DeepSeek Harness, with guided questions, project context, and reusable prompts.",
   "license": "MIT",
   "type": "module",
@@ -10,7 +10,7 @@
   },
   "engines": {
     "node": ">=24.9",
-    "dsh": "0.2.2-rc.1"
+    "dsh": "0.2.2-rc.5"
   },
   "exports": {
     ".": {
@@ -57,31 +57,31 @@
   },
   "dependencies": {
     "lucide-react": "1.58.0",
-    "zod": "4.4.3"
+    "zod": "4.6.6"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.1.0",
-    "@deepseek-ai/dsh-credentials": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-llm": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-storage-domain": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-typert-protocol": "0.2.2-rc.1"
+    "@deepseek-ai/dsh-credentials": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-storage-domain": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-typert-protocol": "0.2.2-rc.5"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "~4.1.0",
     "@deepseek-ai/cordis-plugin-group": "~1.1.0",
     "@deepseek-ai/cordis-plugin-include": "~1.1.0",
     "@deepseek-ai/cordis-plugin-loader": "~1.1.0",
-    "@deepseek-ai/dsh-api-gateway": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-api-session-controller": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-client-ui-conversation": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-client-ui-slots": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-credentials": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-llm": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-storage": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-storage-domain": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-storage-json": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-typert-protocol": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-typert-registry": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-api-gateway": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-api-session-controller": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-client-ui-conversation": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-credentials": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-storage": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-storage-domain": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-storage-json": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-typert-protocol": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-typert-registry": "0.2.2-rc.5",
     "prettier": "3.6.2"
   }
 }

@@ -2,6 +2,16 @@
 
 历次发布说明见 GitHub Releases。这里只记当前版本的验证状态和已知限制。
 
+## 0.1.7
+
+2026-11-22。Windows，Node.js `24.16.0`，Harness SDK `0.2.2-rc.5`，Cordis `4.1.0`，Zod `4.6.6`。
+
+- `engines.dsh`、DSH peerDependencies 和开发 SDK 统一为 `0.2.2-rc.5`。
+- Zod 与新版存储 SDK 对齐为 `4.6.6`；`pnpm peers check`、Host 与 Client 类型检查通过。
+- `pnpm test`：12 个文件、158 项通过。
+- `pnpm pack:plugin`：构建、客户端入口注册及归档校验通过，生成 `dist/dsh-promptkit-0.1.7.tgz`。
+- 本轮未启动真实 Harness，安装升级和真实模型调用未验证。
+
 ## 0.1.6
 
 2026-11-05。Windows 11，Node.js `24.16.0`，Harness SDK `0.2.2-rc.1`，Cordis `4.1.0`。
